@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Заявки на доступы к системам</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --line:#e2e6ec; --text:#1f2733;
+    --muted:#6b7684; --accent:#2563eb; --accent-d:#1d4ed8;
+    --ok:#16a34a; --ok-bg:#e7f6ec; --pending:#b45309; --pending-bg:#fdf0d9;
+    --shadow:0 1px 3px rgba(16,24,40,.06),0 1px 2px rgba(16,24,40,.04);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:var(--bg);color:var(--text);line-height:1.5}
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:20px 24px}
+  header h1{margin:0;font-size:20px}
+  header p{margin:4px 0 0;color:var(--muted);font-size:14px}
+  .wrap{max-width:960px;margin:0 auto;padding:24px}
+  .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:14px 18px;margin-bottom:20px;box-shadow:var(--shadow)}
+  .bar .prog{font-size:14px;color:var(--muted)}
+  .bar .prog b{color:var(--text)}
+  .tools{display:flex;gap:8px;flex-wrap:wrap}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px}
+  .card .top{display:flex;align-items:center;gap:12px}
+  .card .ic{width:42px;height:42px;border-radius:10px;background:#eef2ff;
+    display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}
+  .card h3{margin:0;font-size:16px}
+  .card .desc{color:var(--muted);font-size:13px;margin:0}
+  .status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
+    padding:3px 10px;border-radius:99px;width:fit-content}
+  .status.pending{color:var(--pending);background:var(--pending-bg)}
+  .status.done{color:var(--ok);background:var(--ok-bg)}
+  .card .acts{display:flex;gap:8px;margin-top:auto}
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid transparent;
+    padding:9px 14px;font-size:14px;font-weight:500;transition:.12s}
+  .btn-p{background:var(--accent);color:#fff}
+  .btn-p:hover{background:var(--accent-d)}
+  .btn-s{background:#fff;color:var(--text);border-color:var(--line)}
+  .btn-s:hover{background:#f8fafc}
+  .btn-sm{padding:7px 12px;font-size:13px}
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;
+    align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:50}
+  .overlay.open{display:flex}
+  .modal{background:var(--card);border-radius:14px;width:100%;max-width:560px;
+    box-shadow:0 20px 40px rgba(16,24,40,.2)}
+  .modal .mh{display:flex;align-items:center;justify-content:space-between;
+    padding:18px 22px;border-bottom:1px solid var(--line)}
+  .modal .mh h2{margin:0;font-size:17px}
+  .modal .mh .x{background:none;border:none;font-size:22px;color:var(--muted);padding:0 4px}
+  .modal .mb{padding:22px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .field .req{color:#dc2626}
+  .field input,.field select,.field textarea{width:100%;padding:9px 11px;
+    border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;
+    border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+  .field .err{color:#dc2626;font-size:12px;margin-top:4px;display:none}
+  .field.invalid input,.field.invalid select{border-color:#dc2626}
+  .field.invalid .err{display:block}
+  .modal .mf{display:flex;justify-content:flex-end;gap:10px;
+    padding:16px 22px;border-top:1px solid var(--line)}
+  .hint{font-size:12px;color:var(--muted);margin:-6px 0 14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Заявки на доступы к системам</h1>
+  <p>Заполните заявки на нужные системы — по каждой сформируется файл для скачивания.</p>
+</header>
+
+<div class="wrap">
+  <div class="bar">
+    <div class="prog">Оформлено: <b id="progText">0 из 0</b></div>
+    <div class="tools">
+      <button class="btn-s btn-sm" onclick="exportJson()">Экспорт JSON</button>
+      <button class="btn-s btn-sm" onclick="document.getElementById('imp').click()">Импорт JSON</button>
+      <input id="imp" type="file" accept="application/json" hidden onchange="importJson(this)">
+    </div>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="mh"><h2 id="mTitle"></h2><button class="x" onclick="closeModal()">&times;</button></div>
+    <div class="mb"><p class="hint" id="mHint"></p><form id="mForm"></form></div>
+    <div class="mf">
+      <button class="btn-s" onclick="closeModal()">Отмена</button>
+      <button class="btn-p" onclick="saveAndDownload()">Сохранить и скачать</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   КОНФИГ СИСТЕМ.
+   Когда придут шаблоны заявок — правим ТОЛЬКО этот массив:
+     - fields: поля модального окна
+     - format: 'word' (.doc) или 'excel' (.xls)
+     - fileName(d): имя скачиваемого файла
+     - render(d): содержимое файла заявки (HTML → Word/Excel)
+   Добавить новую систему = добавить объект в массив.
+   Поля ниже — ЗАГЛУШКИ, заменим по вашим шаблонам.
+   ========================================================================== */
+
+// Часто повторяющиеся поля сотрудника (пока общие для всех заявок-заглушек)
+const COMMON = [
+  {name:'fio',  label:'ФИО сотрудника', type:'text', required:true, placeholder:'Иванов Иван Иванович'},
+  {name:'dept', label:'Подразделение',  type:'text', required:true},
+  {name:'post', label:'Должность',      type:'text', required:true},
+  {name:'phone',label:'Телефон',        type:'text', required:false},
+];
+
+const SYSTEMS = [
+  {
+    id:'account', title:'Учётная запись', icon:'👤',
+    desc:'Создание доменной учётной записи в сети организации.',
+    format:'word',
+    fields:[...COMMON, {name:'login', label:'Желаемый логин', type:'text', required:false}],
+    fileName:d => `Заявка_Учётная_запись_${safe(d.fio)}.doc`,
+    render:d => docTable('Заявка на создание учётной записи', d, {
+      'ФИО':d.fio,'Подразделение':d.dept,'Должность':d.post,'Телефон':d.phone,'Логин':d.login
+    })
+  },
+  {
+    id:'mail', title:'Почтовый ящик', icon:'✉️',
+    desc:'Создание корпоративного почтового ящика.',
+    format:'word',
+    fields:[...COMMON, {name:'alias', label:'Желаемый адрес (до @)', type:'text', required:false}],
+    fileName:d => `Заявка_Почта_${safe(d.fio)}.doc`,
+    render:d => docTable('Заявка на почтовый ящик', d, {
+      'ФИО':d.fio,'Подразделение':d.dept,'Должность':d.post,'Адрес':d.alias
+    })
+  },
+  {
+    id:'ai', title:'Лаборатория ИИ', icon:'🧪',
+    desc:'Доступ в лабораторию искусственного интеллекта.',
+    format:'word', fields:[...COMMON],
+    fileName:d => `Заявка_ЛабИИ_${safe(d.fio)}.doc`,
+    render:d => docTable('Заявка на доступ в Лабораторию ИИ', d, {
+      'ФИО':d.fio,'Подразделение':d.dept,'Должность':d.post
+    })
+  },
+  {
+    id:'cus', title:'ЦУС', icon:'🖥️',
+    desc:'Доступ к системе ЦУС.',
+    format:'word', fields:[...COMMON],
+    fileName:d => `Заявка_ЦУС_${safe(d.fio)}.doc`,
+    render:d => docTable('Заявка на доступ к ЦУС', d, {
+      'ФИО':d.fio,'Подразделение':d.dept,'Должность':d.post
+    })
+  },
+  {
+    id:'ektp', title:'ЕКТП', icon:'📊',
+    desc:'Доступ к системе ЕКТП.',
+    format:'excel', fields:[...COMMON],
+    fileName:d => `Заявка_ЕКТП_${safe(d.fio)}.xls`,
+    render:d => xlsTable('Заявка на доступ к ЕКТП', {
+      'ФИО':d.fio,'Подразделение':d.dept,'Должность':d.post,'Телефон':d.phone
+    })
+  },
+  {
+    id:'term', title:'Терминальный сервер', icon:'🔌',
+    desc:'Доступ к терминальному серверу.',
+    format:'word', fields:[...COMMON],
+    fileName:d => `Заявка_Терминал_${safe(d.fio)}.doc`,
+    render:d => docTable('Заявка на доступ к терминальному серверу', d, {
+      'ФИО':d.fio,'Подразделение':d.dept,'Должность':d.post
+    })
+  },
+];
+
+/* ========================= ХРАНЕНИЕ СОСТОЯНИЯ ============================ */
+const LS_KEY = 'access-requests-v1';
+let store = load();
+function load(){ try{return JSON.parse(localStorage.getItem(LS_KEY))||{}}catch(e){return {}} }
+function persist(){ localStorage.setItem(LS_KEY, JSON.stringify(store)) }
+
+/* ============================ ОТРИСОВКА ================================= */
+function render(){
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  SYSTEMS.forEach(s=>{
+    const done = !!store[s.id];
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="top">
+        <div class="ic">${s.icon}</div>
+        <div><h3>${s.title}</h3></div>
+      </div>
+      <p class="desc">${s.desc}</p>
+      <span class="status ${done?'done':'pending'}">${done?'✓ Оформлено':'● Не оформлено'}</span>
+      <div class="acts">
+        <button class="btn-p btn-sm" onclick="openModal('${s.id}')">${done?'Изменить':'Заполнить'}</button>
+        ${done?`<button class="btn-s btn-sm" onclick="redownload('${s.id}')">Скачать файл</button>`:''}
+      </div>`;
+    grid.appendChild(card);
+  });
+  const n = SYSTEMS.filter(s=>store[s.id]).length;
+  document.getElementById('progText').textContent = `${n} из ${SYSTEMS.length}`;
+}
+
+/* ============================== МОДАЛКА ================================= */
+let current = null;
+function openModal(id){
+  current = SYSTEMS.find(s=>s.id===id);
+  const saved = store[id]||{};
+  document.getElementById('mTitle').textContent = current.title;
+  document.getElementById('mHint').textContent = 'Заполните поля. После сохранения файл заявки скачается автоматически.';
+  const form = document.getElementById('mForm');
+  form.innerHTML = current.fields.map(f=>`
+    <div class="field" data-name="${f.name}">
+      <label>${f.label}${f.required?' <span class="req">*</span>':''}</label>
+      ${fieldControl(f, saved[f.name]??'')}
+      <div class="err">Поле обязательно для заполнения</div>
+    </div>`).join('');
+  document.getElementById('overlay').classList.add('open');
+}
+function fieldControl(f, val){
+  const v = String(val).replace(/"/g,'&quot;');
+  if(f.type==='textarea') return `<textarea name="${f.name}" rows="3">${val||''}</textarea>`;
+  if(f.type==='select') return `<select name="${f.name}">${
+    (f.options||[]).map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select>`;
+  return `<input name="${f.name}" type="${f.type||'text'}" value="${v}" placeholder="${f.placeholder||''}">`;
+}
+function closeModal(){ document.getElementById('overlay').classList.remove('open'); current=null; }
+
+function saveAndDownload(){
+  const form = document.getElementById('mForm');
+  const data = {}; let ok = true;
+  current.fields.forEach(f=>{
+    const wrap = form.querySelector(`[data-name="${f.name}"]`);
+    const el = form.elements[f.name];
+    data[f.name] = (el.value||'').trim();
+    const bad = f.required && !data[f.name];
+    wrap.classList.toggle('invalid', bad);
+    if(bad) ok = false;
+  });
+  if(!ok) return;
+  store[current.id] = data; persist();
+  downloadRequest(current, data);
+  closeModal(); render();
+}
+function redownload(id){ const s=SYSTEMS.find(x=>x.id===id); downloadRequest(s, store[id]); }
+
+/* ===================== ГЕНЕРАЦИЯ ФАЙЛА ЗАЯВКИ =========================== */
+function downloadRequest(sys, data){
+  const isExcel = sys.format==='excel';
+  const head = `<html xmlns:o="urn:schemas-microsoft-com:office:office" `+
+    `xmlns:x="urn:schemas-microsoft-com:office:excel" `+
+    `xmlns:w="urn:schemas-microsoft-com:office:word" `+
+    `xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"></head><body>`;
+  const source = head + sys.render(data) + '</body></html>';
+  const mime = isExcel ? 'application/vnd.ms-excel' : 'application/msword';
+  const blob = new Blob(['﻿', source], {type:mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = sys.fileName(data);
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+// Шаблон Word-документа (таблица «поле → значение»)
+function docTable(title, d, rows){
+  const trs = Object.entries(rows).map(([k,v])=>
+    `<tr><td style="border:1px solid #999;padding:6px 10px;background:#f2f2f2;font-weight:bold">${k}</td>`+
+    `<td style="border:1px solid #999;padding:6px 10px">${v||'—'}</td></tr>`).join('');
+  return `<div style="font-family:Times New Roman,serif;font-size:14px">
+    <h2 style="text-align:center">${title}</h2>
+    <table style="border-collapse:collapse;width:100%">${trs}</table>
+    <p style="margin-top:40px">Дата: ${new Date().toLocaleDateString('ru-RU')}</p>
+    <p>Подпись: _____________________</p></div>`;
+}
+// Шаблон Excel-листа
+function xlsTable(title, rows){
+  const trs = Object.entries(rows).map(([k,v])=>
+    `<tr><td>${k}</td><td>${v||''}</td></tr>`).join('');
+  return `<table border="1"><tr><th colspan="2">${title}</th></tr>${trs}</table>`;
+}
+
+/* ========================= ЭКСПОРТ / ИМПОРТ ============================ */
+function exportJson(){
+  const blob = new Blob([JSON.stringify(store,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='заявки.json'; a.click();
+}
+function importJson(input){
+  const file = input.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = ()=>{ try{ store=JSON.parse(r.result); persist(); render(); }
+    catch(e){ alert('Не удалось прочитать файл JSON'); } };
+  r.readAsText(file); input.value='';
+}
+
+/* =============================== УТИЛ ================================== */
+function safe(s){ return String(s||'без_имени').replace(/[^\wА-Яа-яЁё]+/g,'_').slice(0,40); }
+
+render();
+</script>
+</body>
+</html>
