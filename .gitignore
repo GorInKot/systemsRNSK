@@ -1,0 +1,4 @@
+# промежуточные токенизированные шаблоны (генерируются build/build.py,
+# итог встроен в index.html как base64)
+build/tokenized/
+.claude/settings.local.json
