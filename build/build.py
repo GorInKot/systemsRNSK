@@ -192,10 +192,32 @@ def build_pkzi():
     return mixed_zip(tok, DOCX_TEXT_PARTS)
 
 
+# ------------------------------------------------------- Терминальный сервер
+def build_terminal():
+    """Лист «6.Терминальный сервер» из ШаблонОбщий.xlsx: заявка на изменение
+    правил МЭ (группа AD_RNSK_TRM_Users_WS). Коллективная таблица объектов
+    используется на одного человека: D14 — ФИО, E14 — наименование ПКЗИ.
+    Остальные листы книги удаляются, № заявки/даты/подписи — от руки."""
+    import openpyxl
+    src = os.path.join(TYPES, 'ШаблонОбщий.xlsx')
+    wb = openpyxl.load_workbook(src)
+    for name in list(wb.sheetnames):
+        if name != '6.Терминальный сервер':
+            del wb[name]
+    ws = wb['6.Терминальный сервер']
+    ws['D14'] = '{{FIO}}'
+    ws['E14'] = '{{KEY}}'
+    tok = os.path.join(OUT, 'terminal.xlsx')
+    wb.save(tok)
+    # openpyxl пишет строки inline (без sharedStrings) — метки лежат в листе
+    return mixed_zip(tok, {'xl/worksheets/sheet1.xml'})
+
+
 # реестр сборщиков: id системы -> функция, возвращающая bytes mixed-zip
 BUILDERS = {
     'ai_lab': build_ai_lab,
     'pkzi': build_pkzi,
+    'terminal': build_terminal,
 }
 
 
