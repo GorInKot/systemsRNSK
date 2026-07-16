@@ -84,9 +84,81 @@ def build_ai_lab():
     return mixed_zip(tok, DOCX_TEXT_PARTS)
 
 
+# ------------------------------------------------------------------ хелперы
+def set_para(par, token):
+    """Заменить весь текст абзаца на token, сохранив формат первого run."""
+    if par.runs:
+        par.runs[0].text = token
+        for r in par.runs[1:]:
+            r.text = ''
+    else:
+        par.add_run(token)
+
+
+def repl_runs(par, start, end, token):
+    """Заменить текст runs[start..end] на token (в первом), очистить остальные."""
+    runs = par.runs
+    runs[start].text = token
+    for i in range(start + 1, end + 1):
+        runs[i].text = ''
+
+
+def preserve_space(par, run=0):
+    """xml:space="preserve" на w:t run'а — чтобы Word не съедал пробелы,
+    которыми браузер дополняет значение метки до фиксированной ширины."""
+    from docx.oxml.ns import qn
+    for t in par.runs[run]._element.findall(qn('w:t')):
+        t.set(qn('xml:space'), 'preserve')
+
+
+# ------------------------------------------------------------------ ПКЗИ
+def build_pkzi():
+    from docx import Document
+    src = os.path.join(TYPES, '!Заявка на первичную генерацию ключевой информации.docx')
+    doc = Document(src)
+    t1 = doc.tables[1]
+
+    # подразделение: «ООО «РН-СтройКонтроль», Группа …» → сохраняем префикс, метка вместо «Группа …»
+    p = t1.rows[3].cells[1].paragraphs[0]
+    repl_runs(p, 1, 2, '{{PODR}}')
+
+    # руководитель СП: должность / ФИО / телефон
+    ruk = t1.rows[4].cells[1]
+    set_para(ruk.paragraphs[0], '{{RUK_POST}}')
+    set_para(ruk.paragraphs[1], '{{RUK_FIO}}')
+    repl_runs(ruk.paragraphs[3], 0, 3, '{{RUK_PHONE}}')   # телефон+доб.+номер, дата/подпись сохраняются
+    preserve_space(ruk.paragraphs[3])                     # браузер дополняет телефон пробелами до 28 знаков
+
+    # подключаемый пользователь: должность / ФИО / телефон / приказ
+    usr = t1.rows[5].cells[1]
+    set_para(usr.paragraphs[0], '{{USER_POST}}')
+    set_para(usr.paragraphs[1], '{{USER_FIO}}')
+    repl_runs(usr.paragraphs[3], 0, 2, '{{USER_PHONE}}')
+    preserve_space(usr.paragraphs[3])                     # см. RUK_PHONE
+    repl_runs(usr.paragraphs[6], 7, 8, '{{ORDER}}')       # «Приказ № {{ORDER}}»
+
+    # имя сертификата (T1 r2 c2): «Имя сертификата:____» → метка вместо
+    # прочерка, значение — с новой строки и подчёркнуто («на линии»);
+    # пустое значение браузер заменяет линией «___» (см. mapValues в index.html)
+    p = t1.rows[2].cells[2].paragraphs[0]
+    p.runs[0].add_break()
+    repl_runs(p, 1, 1, '{{CERT}}')
+    p.runs[1].underline = True
+
+    # e-mail (T2 r1 c1)
+    set_para(doc.tables[2].rows[1].cells[1].paragraphs[0], '{{EMAIL}}')
+
+    # срок использования — НЕ заполняем (оставляем «___» 202_ пустыми)
+
+    tok = os.path.join(OUT, 'pkzi.docx')
+    doc.save(tok)
+    return mixed_zip(tok, DOCX_TEXT_PARTS)
+
+
 # реестр сборщиков: id системы -> функция, возвращающая bytes mixed-zip
 BUILDERS = {
     'ai_lab': build_ai_lab,
+    'pkzi': build_pkzi,
 }
 
 
