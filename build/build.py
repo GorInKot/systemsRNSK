@@ -111,12 +111,49 @@ def preserve_space(par, run=0):
         t.set(qn('xml:space'), 'preserve')
 
 
+def unwrap_sdt(sdt):
+    """Заменить content control (w:sdt) его содержимым (w:sdtContent).
+    Чекбокс перестаёт быть интерактивным — остаётся простой текст ☒/☐,
+    который никто случайно не перещёлкнет в Word."""
+    from docx.oxml.ns import qn
+    parent = sdt.getparent()
+    idx = list(parent).index(sdt)
+    for child in reversed(list(sdt.find(qn('w:sdtContent')))):
+        parent.insert(idx, child)
+    parent.remove(sdt)
+
+
 # ------------------------------------------------------------------ ПКЗИ
 def build_pkzi():
     from docx import Document
+    from docx.oxml.ns import qn
     src = os.path.join(TYPES, '!Заявка на первичную генерацию ключевой информации.docx')
     doc = Document(src)
     t1 = doc.tables[1]
+
+    # действие (T1 r1 c2): чекбоксы w14:checkbox → метки ☒/☐ из формы.
+    # Порядок в ячейке: генерация, продление, АП VipNet, контакты VipNet,
+    # переименование (последний не токенизируем — остаётся пустым ☐).
+    tc = t1.rows[1].cells[2]._tc
+    boxes = [t for t in tc.iter(qn('w:t')) if t.text in ('☒', '☐')]
+    assert len(boxes) == 5, f'ожидалось 5 чекбоксов действий, найдено {len(boxes)}'
+    for t, tok in zip(boxes, ['{{CHK_GEN}}', '{{CHK_PROLONG}}',
+                              '{{CHK_AP}}', '{{CHK_CONTACTS}}']):
+        t.text = tok
+        unwrap_sdt(next(t.iterancestors(qn('w:sdt'))))
+
+    # срок использования (абзац 4 тела): с «___» ______ 202_ г. до «___» … —
+    # день/месяц/год обоих дат; пустые значения браузер заменяет прочерками
+    # и пробелами исходного бланка (см. mapValues в index.html)
+    p = doc.paragraphs[4]
+    repl_runs(p, 2, 4, '{{D_FROM}}')     # «___» день
+    repl_runs(p, 6, 7, '{{M_FROM}}')     # месяц (пустое место бланка)
+    repl_runs(p, 9, 9, '{{Y_FROM}}')     # «202_» → 20{{Y_FROM}}
+    repl_runs(p, 14, 15, '{{D_TO}}')
+    repl_runs(p, 17, 17, '{{M_TO}}')
+    repl_runs(p, 19, 19, '{{Y_TO}}')
+    for i in (2, 6, 9, 14, 17, 19):
+        preserve_space(p, i)
 
     # подразделение: «ООО «РН-СтройКонтроль», Группа …» → сохраняем префикс, метка вместо «Группа …»
     p = t1.rows[3].cells[1].paragraphs[0]
