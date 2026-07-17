@@ -38,6 +38,9 @@
   .status.done{color:var(--ok);background:var(--ok-bg)}
   .status.locked{color:var(--muted);background:#eef1f5}
   .card.locked{opacity:.72}
+  /* обязательные первые заявки (УЗ, Почта, ПКЗИ) — выделены цветом */
+  .card.hl{background:rgb(247,191,106);border-color:rgb(224,164,74)}
+  .card.hl .ic{background:rgba(255,255,255,.6)}
   button:disabled{opacity:.5;cursor:not-allowed}
   .card .acts{display:flex;gap:8px;margin-top:auto}
   button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid transparent;
@@ -87,6 +90,17 @@
   .lead{margin:0 0 18px;color:var(--muted);font-size:14px}
   .placeholder{background:var(--card);border:1px dashed var(--line);border-radius:12px;
     padding:32px;text-align:center;color:var(--muted)}
+  /* таблица реестра сотрудников (вкладка «Администрирование») */
+  .tablewrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;box-shadow:var(--shadow)}
+  table.emp{border-collapse:collapse;width:100%;font-size:13px}
+  table.emp th,table.emp td{padding:9px 12px;border-bottom:1px solid var(--line);
+    text-align:left;white-space:nowrap}
+  table.emp th{background:#f8fafc;font-weight:600;color:var(--muted)}
+  table.emp tbody tr:not(.empty){cursor:pointer}
+  table.emp tbody tr:not(.empty):hover{background:#f8fafc}
+  table.emp tr:last-child td{border-bottom:none}
+  table.emp td.empty-cell{text-align:center;color:var(--muted);padding:28px}
 </style>
 </head>
 <body>
@@ -96,30 +110,52 @@
 </header>
 
 <div class="wrap">
-  <div class="tabs" role="tablist">
-    <button class="tab active" data-tab="new"     onclick="switchTab('new')">Новый сотрудник</button>
-    <button class="tab"        data-tab="current" onclick="switchTab('current')">Действующий сотрудник</button>
+  <!-- Данные одного сотрудника (его заявки): экспорт/импорт JSON — над вкладками -->
+  <div class="bar">
+    <div class="prog">Оформлено: <b id="progText">0 из 0</b></div>
+    <div class="tools">
+      <button class="btn-s btn-sm" onclick="loadExample()">Загрузить пример</button>
+      <button class="btn-s btn-sm" onclick="exportJson()">Экспорт JSON</button>
+      <button class="btn-s btn-sm" onclick="document.getElementById('imp').click()">Импорт JSON</button>
+      <input id="imp" type="file" accept="application/json" hidden onchange="importJson(this)">
+    </div>
   </div>
 
-  <!-- Вкладка: новый сотрудник — полный чек-лист заявок -->
-  <div class="pane active" id="pane-new">
-    <p class="lead">Вы недавно устроились — оформите заявки на доступы ко всем необходимым системам.</p>
-    <div class="bar">
-      <div class="prog">Оформлено: <b id="progText">0 из 0</b></div>
-      <div class="tools">
-        <button class="btn-s btn-sm" onclick="loadExample()">Загрузить пример</button>
-        <button class="btn-s btn-sm" onclick="exportJson()">Экспорт JSON</button>
-        <button class="btn-s btn-sm" onclick="document.getElementById('imp').click()">Импорт JSON</button>
-        <input id="imp" type="file" accept="application/json" hidden onchange="importJson(this)">
-      </div>
-    </div>
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="emp"   onclick="switchTab('emp')">Сотрудник</button>
+    <button class="tab"        data-tab="admin" onclick="switchTab('admin')">Администрирование</button>
+  </div>
+
+  <!-- Вкладка: сотрудник — чек-лист заявок (порядок карточек = рекомендованная
+       последовательность; УЗ/Почта/ПКЗИ выделены цветом, блокировки нет) -->
+  <div class="pane active" id="pane-emp">
+    <p class="lead">Оформите заявки на доступы к нужным системам — по каждой сформируется файл для скачивания.</p>
     <div class="grid" id="grid"></div>
   </div>
 
-  <!-- Вкладка: действующий сотрудник — все системы доступны сразу, без последовательности -->
-  <div class="pane" id="pane-current">
-    <p class="lead">Вы уже работаете в организации — оформляйте доступ к любым системам в любом порядке.</p>
-    <div class="grid" id="grid-current"></div>
+  <!-- Вкладка: администрирование — реестр сотрудников (JSON у ИТ) -->
+  <div class="pane" id="pane-admin">
+    <p class="lead">Реестр сотрудников: импортируйте JSON-файл, дополняйте и выгружайте обновлённый. После изменений — «Экспорт» (localStorage — рабочий кэш, файл — источник истины).</p>
+    <div class="bar">
+      <div class="tools">
+        <button class="btn-s btn-sm" onclick="document.getElementById('impEmp').click()">Импорт данных</button>
+        <button class="btn-s btn-sm" onclick="exportEmployees()">Экспорт</button>
+        <button class="btn-p btn-sm" onclick="openEmpModal()">Добавить сотрудника</button>
+        <input id="impEmp" type="file" accept="application/json" hidden onchange="importEmployees(this)">
+      </div>
+      <div class="prog" id="empCount"></div>
+    </div>
+    <div class="tablewrap">
+      <table class="emp" id="empTable">
+        <thead><tr>
+          <th>№ п/п</th><th>ФИО</th><th>Должность</th><th>Номер телефона</th><th>Email</th>
+          <th>Наименование структурного подразделения</th><th>ФИО руководителя</th>
+          <th>Должность руководителя</th><th>Номер телефона руководителя</th>
+          <th>Номер приказа</th><th>Дата приказа</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -129,7 +165,7 @@
     <div class="mb"><p class="hint" id="mHint"></p><form id="mForm"></form></div>
     <div class="mf">
       <button class="btn-s" onclick="closeModal()">Отмена</button>
-      <button class="btn-p" onclick="saveAndDownload()">Сохранить и скачать</button>
+      <button class="btn-p" id="mSave">Сохранить и скачать</button>
     </div>
   </div>
 </div>
@@ -237,7 +273,7 @@ const PKZI_ACTIONS = [
 ];
 function makePkzi(over){
   return {
-    requires:[], template:'pkzi', textParts:DOCX_PART,
+    template:'pkzi', textParts:DOCX_PART,
     fields:[
       {name:'action',    label:'Действие', type:'select', required:true,
         options:over.actions, default:over.actions[0]},
@@ -251,7 +287,10 @@ function makePkzi(over){
       {name:'phone_user',label:'Телефон пользователя', type:'text', required:false},
       {name:'email',     label:'E-mail', type:'text', required:d=>!d.no_email, placeholder:'II_Ivanov@rnsk.rosneft.ru'},
       {name:'no_email',  label:'нет E-mail', type:'checkbox', disables:'email'},
-      {name:'cert',      label:'Имя сертификата', type:'text', required:false},
+      // при первичной генерации сертификата ещё нет — поле скрывается
+      {name:'cert',      label:'Имя сертификата', type:'text', required:false,
+        placeholder:'имя существующего сертификата',
+        showIf:d=>d.action!==PKZI_ACTIONS[0]},
       {name:'order',     label:'Приказ о приёме (№ приказа, дата — через запятую)', type:'text', required:false, placeholder:'86-к, 11.12.2020'},
       {name:'fio_ruk',   label:'Ф.И.О. руководителя СП', type:'text', required:true},
       {name:'post_ruk',  label:'Должность руководителя СП', type:'text', required:true},
@@ -293,9 +332,49 @@ function makePkzi(over){
   };
 }
 
+// Карточка-заглушка: шаблон ещё не размечен (кнопка неактивна).
+const stub = o => ({template:null, textParts:[], fields:[], fileName:()=> '', mapValues:()=>({}), ...o});
+
+// Порядок массива = порядок карточек в сетке (рекомендованная последовательность
+// оформления, без блокировки). hl:true — выделение цветом обязательных первых
+// заявок: УЗ → Почта и ПКЗИ → остальные.
 const SYSTEMS = [
+  stub({id:'account', title:'Учётная запись', icon:'👤', hl:true,
+    desc:'Учётная запись в домене — отправная точка: без неё остальные доступы не оформить.'}),
+  stub({id:'mail', title:'Почтовый ящик', icon:'📧', hl:true,
+    desc:'Корпоративная электронная почта.'}),
+  // Бланк ПКЗИ обслуживает четыре действия (чекбоксы одной заявки),
+  // поделённые между двумя карточками: «ПКЗИ» — генерация и продление,
+  // «VipNet / Деловая почта» — абонентский пункт и контакты.
+  makePkzi({
+    id:'pkzi', title:'Ключевая информация ПКЗИ', icon:'🔑', hl:true,
+    desc:'Генерация и продление ключевой информации ПКЗИ.',
+    actions:PKZI_ACTIONS.slice(0,2),   // генерация, продление
+  }),
+  makePkzi({
+    id:'vipnet', title:'VipNet / Деловая почта', icon:'✉️',
+    desc:'Создание абонентского пункта и добавление контактов «VipNet» (ПО «Деловая почта»).',
+    actions:PKZI_ACTIONS.slice(2),     // АП, контакты
+  }),
+  stub({id:'ksed', title:'КСЭД', icon:'📄',
+    desc:'Корпоративная система электронного документооборота.'}),
+  stub({id:'sap', title:'SAP', icon:'📊', desc:'Доступ к системе SAP.'}),
+  stub({id:'c1', title:'1С', icon:'🧮', desc:'Доступ к системе «1С».'}),
+  stub({id:'vkd', title:'ВКД', icon:'🗄️',
+    desc:'Доступ к ИС «Виртуальные комнаты данных».'}),
   {
-    id:'ai_lab', title:'Лаборатория ИИ', icon:'🧪', requires:[],
+    id:'terminal', title:'Терминальный сервер', icon:'🖥️',
+    desc:'Доступ к терминальному серверу: добавление в группу «Пользователи АРМ» на МЭ.',
+    template:'terminal', textParts:['xl/worksheets/sheet1.xml'],
+    fields:[
+      {name:'fio', label:'Ф.И.О. сотрудника', type:'text', required:true, placeholder:'Иванов Иван Иванович'},
+      {name:'key', label:'Наименование ПКЗИ', type:'text', required:true},
+    ],
+    fileName:d => `Заявка_Терминальный_сервер_${safe(d.fio)}.xlsx`,
+    mapValues:d => ({FIO:d.fio, KEY:d.key}),
+  },
+  {
+    id:'ai_lab', title:'Лаборатория ИИ', icon:'🧪',
     desc:'Управление доступом к стенду «Лаборатория искусственного интеллекта».',
     template:'ai_lab', textParts:DOCX_PART,
     fields:[
@@ -331,35 +410,6 @@ const SYSTEMS = [
       };
     }
   },
-  // Бланк ПКЗИ обслуживает четыре действия (чекбоксы одной заявки),
-  // поделённые между двумя карточками: «ПКЗИ» — генерация и продление,
-  // «VipNet / Деловая почта» — абонентский пункт и контакты.
-  makePkzi({
-    id:'pkzi', title:'Ключевая информация ПКЗИ', icon:'🔑',
-    desc:'Генерация и продление ключевой информации ПКЗИ.',
-    actions:PKZI_ACTIONS.slice(0,2),   // генерация, продление
-  }),
-  makePkzi({
-    id:'vipnet', title:'VipNet / Деловая почта', icon:'✉️',
-    desc:'Создание абонентского пункта и добавление контактов «VipNet» (ПО «Деловая почта»).',
-    actions:PKZI_ACTIONS.slice(2),     // АП, контакты
-  }),
-  {
-    id:'terminal', title:'Терминальный сервер', icon:'🖥️', requires:[],
-    desc:'Доступ к терминальному серверу: добавление в группу «Пользователи АРМ» на МЭ.',
-    template:'terminal', textParts:['xl/worksheets/sheet1.xml'],
-    fields:[
-      {name:'fio', label:'Ф.И.О. сотрудника', type:'text', required:true, placeholder:'Иванов Иван Иванович'},
-      {name:'key', label:'Наименование ПКЗИ', type:'text', required:true},
-    ],
-    fileName:d => `Заявка_Терминальный_сервер_${safe(d.fio)}.xlsx`,
-    mapValues:d => ({FIO:d.fio, KEY:d.key}),
-  },
-  {
-    id:'vkd', title:'ВКД', icon:'🗄️', requires:[],
-    desc:'Доступ к ИС «Виртуальные комнаты данных».',
-    template:null, textParts:['xl/sharedStrings.xml'], fields:[], fileName:d=>'', mapValues:d=>({})
-  },
 ];
 
 /* ========================= ХРАНЕНИЕ СОСТОЯНИЯ ============================ */
@@ -375,40 +425,29 @@ function switchTab(name){
 }
 
 /* ============================ ОТРИСОВКА ================================= */
-// gated=true (новый сотрудник) — учитываем зависимости requires.
-// gated=false (действующий) — все системы доступны сразу.
 function isDone(id){ return !!store[id]; }
-function missingReqs(s, gated){
-  if(!gated) return [];
-  return (s.requires||[]).filter(id=>!isDone(id));
-}
 
 function render(){
-  renderGrid('grid', true);       // вкладка «Новый сотрудник» — с последовательностью
-  renderGrid('grid-current', false); // вкладка «Действующий сотрудник» — без последовательности
-  const n = SYSTEMS.filter(s=>isDone(s.id)).length;
-  document.getElementById('progText').textContent = `${n} из ${SYSTEMS.length}`;
+  renderGrid();
+  renderEmployees();
+  // прогресс — только по системам с подключённым шаблоном
+  const active = SYSTEMS.filter(s=>s.template);
+  const n = active.filter(s=>isDone(s.id)).length;
+  document.getElementById('progText').textContent = `${n} из ${active.length}`;
 }
 
-function renderGrid(containerId, gated){
-  const grid = document.getElementById(containerId);
-  if(!grid) return;
+function renderGrid(){
+  const grid = document.getElementById('grid');
   grid.innerHTML = '';
   SYSTEMS.forEach(s=>{
     const done = isDone(s.id);
-    const miss = missingReqs(s, gated);
-    const locked = !done && miss.length>0;
     const card = document.createElement('div');
-    card.className = 'card' + ((locked || (!done && !s.template))?' locked':'');
+    card.className = 'card' + (s.hl?' hl':'') + ((!done && !s.template)?' locked':'');
     let statusHtml, actsHtml;
     if(done){
       statusHtml = `<span class="status done">✓ Оформлено</span>`;
       actsHtml = `<button class="btn-p btn-sm" onclick="openModal('${s.id}')">Изменить</button>
                   <button class="btn-s btn-sm" onclick="redownload('${s.id}')">Скачать файл</button>`;
-    } else if(locked){
-      const names = miss.map(id=>SYSTEMS.find(x=>x.id===id).title).join(', ');
-      statusHtml = `<span class="status locked">🔒 Сначала: ${names}</span>`;
-      actsHtml = `<button class="btn-p btn-sm" disabled>Заполнить</button>`;
     } else if(!s.template){
       statusHtml = `<span class="status locked">🛠 Шаблон в подготовке</span>`;
       actsHtml = `<button class="btn-p btn-sm" disabled>Заполнить</button>`;
@@ -429,14 +468,11 @@ function renderGrid(containerId, gated){
 }
 
 /* ============================== МОДАЛКА ================================= */
+// Одна модалка на два сценария: заявка системы (openModal) и карточка
+// сотрудника реестра (openEmpModal) — кнопка mSave перенастраивается.
 let current = null;
-function openModal(id){
-  current = SYSTEMS.find(s=>s.id===id);
-  const saved = store[id]||{};
-  document.getElementById('mTitle').textContent = current.title;
-  document.getElementById('mHint').textContent = 'Заполните поля. После сохранения файл заявки скачается автоматически.';
-  const form = document.getElementById('mForm');
-  form.innerHTML = current.fields.map(f=> f.type==='checkbox' ? `
+function formHtml(fields, saved){
+  return fields.map(f=> f.type==='checkbox' ? `
     <div class="field field-check" data-name="${f.name}">
       <label class="check"><input type="checkbox" name="${f.name}" ${saved[f.name]?'checked':''}> ${f.label}</label>
     </div>` : `
@@ -445,6 +481,30 @@ function openModal(id){
       ${fieldControl(f, saved[f.name] ?? (typeof f.default==='function'?f.default():f.default) ?? '')}
       <div class="err">Поле обязательно для заполнения</div>
     </div>`).join('');
+}
+function showModal(title, hint, fields, saved, btnText, btnFn){
+  document.getElementById('mTitle').textContent = title;
+  document.getElementById('mHint').textContent = hint;
+  document.getElementById('mForm').innerHTML = formHtml(fields, saved);
+  const b = document.getElementById('mSave');
+  b.textContent = btnText; b.onclick = btnFn;
+  document.getElementById('overlay').classList.add('open');
+}
+// собрать текущие значения формы по описанию полей
+function readForm(fields, form){
+  const data = {};
+  fields.forEach(f=>{
+    const el = form.elements[f.name];
+    data[f.name] = f.type==='checkbox' ? el.checked : (el.value||'').trim();
+  });
+  return data;
+}
+function openModal(id){
+  current = SYSTEMS.find(s=>s.id===id);
+  showModal(current.title,
+    'Заполните поля. После сохранения файл заявки скачается автоматически.',
+    current.fields, store[id]||{}, 'Сохранить и скачать', saveAndDownload);
+  const form = document.getElementById('mForm');
   // чекбокс с disables:'имя' блокирует связанное поле (например, «нет E-mail»)
   current.fields.filter(f=>f.type==='checkbox'&&f.disables).forEach(f=>{
     const cb=form.elements[f.name], dep=form.elements[f.disables];
@@ -452,7 +512,20 @@ function openModal(id){
       if(cb.checked) dep.closest('.field').classList.remove('invalid'); };
     cb.addEventListener('change', sync); sync();
   });
-  document.getElementById('overlay').classList.add('open');
+  // поле с showIf:d=>… видно только при выполнении условия (например,
+  // «Имя сертификата» скрыто при первичной генерации — сертификата ещё нет)
+  if(current.fields.some(f=>f.showIf)){
+    const syncVis = ()=>{
+      const data = readForm(current.fields, form);
+      current.fields.filter(f=>f.showIf).forEach(f=>{
+        form.querySelector(`[data-name="${f.name}"]`).style.display =
+          f.showIf(data) ? '' : 'none';
+      });
+    };
+    form.addEventListener('input', syncVis);
+    form.addEventListener('change', syncVis);
+    syncVis();
+  }
 }
 function fieldControl(f, val){
   const v = String(val).replace(/"/g,'&quot;');
@@ -461,20 +534,19 @@ function fieldControl(f, val){
     (f.options||[]).map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select>`;
   return `<input name="${f.name}" type="${f.type||'text'}" value="${v}" placeholder="${f.placeholder||''}">`;
 }
-function closeModal(){ document.getElementById('overlay').classList.remove('open'); current=null; }
+function closeModal(){ document.getElementById('overlay').classList.remove('open'); current=null; empEdit=null; }
 
 function saveAndDownload(){
   const form = document.getElementById('mForm');
-  // сначала собираем все значения — required может зависеть от других полей
-  const data = {};
-  current.fields.forEach(f=>{
-    const el = form.elements[f.name];
-    data[f.name] = f.type==='checkbox' ? el.checked : (el.value||'').trim();
-  });
+  // сначала собираем все значения — required/showIf могут зависеть от других полей
+  const data = readForm(current.fields, form);
+  // скрытые showIf-поля не сохраняются и не проверяются (например, имя
+  // сертификата, введённое до переключения действия на первичную генерацию)
+  current.fields.forEach(f=>{ if(f.showIf && !f.showIf(data)) data[f.name]=''; });
   let ok = true;
   current.fields.forEach(f=>{
     const req = typeof f.required==='function' ? f.required(data) : f.required;
-    const bad = !!req && !data[f.name];
+    const bad = !!req && !data[f.name] && !(f.showIf && !f.showIf(data));
     form.querySelector(`[data-name="${f.name}"]`).classList.toggle('invalid', bad);
     if(bad) ok = false;
   });
@@ -531,6 +603,77 @@ function importJson(input){
   r.onload = ()=>{ try{ store=JSON.parse(r.result); persist(); render(); }
     catch(e){ alert('Не удалось прочитать файл JSON'); } };
   r.readAsText(file); input.value='';
+}
+
+/* ================= РЕЕСТР СОТРУДНИКОВ («Администрирование») =============
+   Массив сотрудников в localStorage (рабочий кэш) + импорт/экспорт JSON-файла
+   (источник истины, хранится у ИТ; персональные данные — в git не попадает). */
+const EMP_KEY = 'employees-v1';
+let employees = loadEmp();
+let empEdit = null;   // индекс редактируемого сотрудника или null (добавление)
+function loadEmp(){ try{const v=JSON.parse(localStorage.getItem(EMP_KEY)); return Array.isArray(v)?v:[]}catch(e){return []} }
+function persistEmp(){ localStorage.setItem(EMP_KEY, JSON.stringify(employees)) }
+
+// Поля карточки сотрудника = колонки таблицы (порядок совпадает).
+const EMP_FIELDS = [
+  {name:'fio',        label:'ФИО', required:true, placeholder:'Иванов Иван Иванович'},
+  {name:'post',       label:'Должность'},
+  {name:'phone',      label:'Номер телефона'},
+  {name:'email',      label:'Email', placeholder:'II_Ivanov@rnsk.rosneft.ru'},
+  {name:'podr',       label:'Наименование структурного подразделения'},
+  {name:'fio_ruk',    label:'ФИО руководителя'},
+  {name:'post_ruk',   label:'Должность руководителя'},
+  {name:'phone_ruk',  label:'Номер телефона руководителя'},
+  {name:'order_num',  label:'Номер приказа', placeholder:'86-к'},
+  {name:'order_date', label:'Дата приказа', placeholder:'11.12.2020'},
+];
+
+function renderEmployees(){
+  const tb = document.querySelector('#empTable tbody');
+  tb.innerHTML = employees.length
+    ? employees.map((e,i)=>`<tr onclick="openEmpModal(${i})"><td>${i+1}</td>${
+        EMP_FIELDS.map(f=>`<td>${xmlEscape(e[f.name])}</td>`).join('')}</tr>`).join('')
+    : `<tr class="empty"><td class="empty-cell" colspan="${EMP_FIELDS.length+1}">Реестр пуст — импортируйте JSON-файл сотрудников или добавьте сотрудника.</td></tr>`;
+  document.getElementById('empCount').textContent = employees.length ? `Сотрудников: ${employees.length}` : '';
+}
+
+function exportEmployees(){
+  const blob = new Blob([JSON.stringify(employees,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`сотрудники_${isoDate(0)}.json`; a.click();
+}
+function importEmployees(input){
+  const file = input.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = ()=>{ try{
+      let v = JSON.parse(r.result);
+      if(!Array.isArray(v)) v = v.employees;         // допускаем {employees:[...]}
+      if(!Array.isArray(v)) throw new Error('not array');
+      if(employees.length && !confirm(`Заменить текущий реестр (${employees.length}) данными из файла (${v.length})?`)) return;
+      employees = v; persistEmp(); renderEmployees();
+    }catch(e){ alert('Не удалось прочитать файл: ожидается JSON-массив сотрудников'); } };
+  r.readAsText(file); input.value='';
+}
+
+// idx — редактирование существующего (клик по строке), без idx — добавление.
+function openEmpModal(idx){
+  empEdit = (idx==null ? null : idx);
+  showModal(empEdit==null ? 'Добавить сотрудника' : 'Карточка сотрудника',
+    'Данные сотрудника для реестра. После изменений выгрузите реестр («Экспорт»).',
+    EMP_FIELDS, empEdit==null ? {} : employees[empEdit], 'Сохранить', saveEmployee);
+}
+function saveEmployee(){
+  const form = document.getElementById('mForm');
+  const data = {}; let ok = true;
+  EMP_FIELDS.forEach(f=>{
+    data[f.name] = (form.elements[f.name].value||'').trim();
+    const bad = !!f.required && !data[f.name];
+    form.querySelector(`[data-name="${f.name}"]`).classList.toggle('invalid', bad);
+    if(bad) ok = false;
+  });
+  if(!ok) return;
+  if(empEdit==null) employees.push(data); else employees[empEdit] = data;
+  persistEmp(); closeModal(); renderEmployees();
 }
 
 /* =============================== УТИЛ ================================== */

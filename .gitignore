@@ -2,3 +2,6 @@
 # итог встроен в index.html как base64)
 build/tokenized/
 .claude/settings.local.json
+
+# реестр сотрудников — персональные данные, в git не попадает
+сотрудники*.json
