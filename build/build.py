@@ -278,6 +278,49 @@ def build_mail_fil():
     }, 'mail_fil.xlsx')
 
 
+# ------------------------------------------------------------------ ВКД
+def build_vkd():
+    """Файл «Заявка ВКД.xlsx» (ИС «Виртуальные комнаты данных»), один лист.
+    Блок «Действия с учётной записью» — чекбоксы ☑/☐ (выбор одного пункта,
+    как в ПКЗИ) → метки на месте символа. Таблица пользователей (4 блока по
+    6 строк) в исходнике содержит ТРИ реальных сотрудника-примера — их
+    вычищаем; заполняем первый блок (строки 15–20) на одного человека,
+    блоки 2–4 очищаем."""
+    import openpyxl
+    src = os.path.join(TYPES, 'Заявка ВКД.xlsx')
+    wb = openpyxl.load_workbook(src)
+    ws = wb.active
+
+    # действие: заменяем символ ☑/☐ в начале строки на метку, текст сохраняем
+    actions = {'C9': '{{CHK_GRANT}}', 'D9': '{{CHK_CHANGE}}',
+               'E9': '{{CHK_REVOKE}}', 'F9': '{{CHK_BLOCK}}', 'H9': '{{CHK_APPROVE}}'}
+    for coord, tok in actions.items():
+        cur = ws[coord].value
+        ws[coord] = tok + cur[1:]   # cur[0] — символ ☑/☐
+
+    # первый блок пользователя (строки 15–20): D17 «Компания» и E15 «☑До срока
+    # действия ВКД» оставляем как есть (значения по умолчанию бланка)
+    ws['B15'] = '{{VDR}}'       # наименование ВКД
+    ws['D15'] = '{{FIO}}'
+    ws['D16'] = '{{EMAIL}}'
+    ws['D20'] = '{{PHONE}}'     # моб. телефон для SMS-кода
+    ws['F15'] = '{{ACCOUNT}}'   # имя учётной записи
+    ws['G15'] = '{{KEY}}'       # имя ключа ПКЗИ-КТ
+    ws['H15'] = '{{REASON}}'    # основание предоставления доступа
+
+    # очищаем блоки 2–4 от данных сотрудников-примеров (оставляем только метки-
+    # подписи столбцов C: «ФИО:», «E-mail:» и т.п.)
+    for start in (21, 27, 33):
+        for col in ('B', 'D', 'F', 'G', 'H', 'E'):
+            ws[f'{col}{start}'] = None
+        ws[f'D{start+1}'] = None   # e-mail
+        ws[f'D{start+2}'] = None   # компания
+
+    tok = os.path.join(OUT, 'vkd.xlsx')
+    wb.save(tok)
+    return mixed_zip(tok, {'xl/worksheets/sheet1.xml'})
+
+
 # реестр сборщиков: id системы -> функция, возвращающая bytes mixed-zip
 BUILDERS = {
     'ai_lab': build_ai_lab,
@@ -287,6 +330,7 @@ BUILDERS = {
     'account_fil': build_account_fil,
     'mail_fil': build_mail_fil,
     'ksed': build_ksed,
+    'vkd': build_vkd,
 }
 
 
