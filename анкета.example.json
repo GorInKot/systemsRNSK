@@ -1,0 +1,16 @@
+{
+  "office": "Головной офис",
+  "fio": "Петров Пётр Петрович",
+  "post": "инженер",
+  "phone": "+7 900 000-11-22",
+  "email": "PP_Petrov@rnsk.rosneft.ru",
+  "podr": "Группа сопровождения ИС",
+  "account_name": "ROSNEFT\\pp.petrov",
+  "pkzi_name": "StroyKontrol_PetrovPP",
+  "order": "86-к, 11.12.2020",
+  "fio_ruk": "Сидоров Сидор Сидорович",
+  "post_ruk": "начальник отдела",
+  "phone_ruk": "+7 900 000-33-44",
+  "vkd_action": "Предоставление доступа Пользователям ВКД",
+  "vdr": ["РНСК", "РНСК КомНПЗ"]
+}
