@@ -192,25 +192,73 @@ def build_pkzi():
     return mixed_zip(tok, DOCX_TEXT_PARTS)
 
 
-# ------------------------------------------------------- Терминальный сервер
-def build_terminal():
-    """Лист «6.Терминальный сервер» из ШаблонОбщий.xlsx: заявка на изменение
-    правил МЭ (группа AD_RNSK_TRM_Users_WS). Коллективная таблица объектов
-    используется на одного человека: D14 — ФИО, E14 — наименование ПКЗИ.
-    Остальные листы книги удаляются, № заявки/даты/подписи — от руки."""
+# --------------------------------------------------- листы ШаблонОбщий.xlsx
+def build_sheet(sheet, cells, out_name):
+    """Оставить в ШаблонОбщий.xlsx один лист `sheet`, вписать метки `cells`
+    ({coord: '{{TOKEN}}'}), пересобрать. openpyxl пишет строки inline (без
+    sharedStrings) → текстовая часть для замены — xl/worksheets/sheet1.xml.
+    № заявки/даты/подписи бланка — от руки."""
     import openpyxl
     src = os.path.join(TYPES, 'ШаблонОбщий.xlsx')
     wb = openpyxl.load_workbook(src)
     for name in list(wb.sheetnames):
-        if name != '6.Терминальный сервер':
+        if name != sheet:
             del wb[name]
-    ws = wb['6.Терминальный сервер']
-    ws['D14'] = '{{FIO}}'
-    ws['E14'] = '{{KEY}}'
-    tok = os.path.join(OUT, 'terminal.xlsx')
+    ws = wb[sheet]
+    for coord, val in cells.items():
+        ws[coord] = val
+    tok = os.path.join(OUT, out_name)
     wb.save(tok)
-    # openpyxl пишет строки inline (без sharedStrings) — метки лежат в листе
     return mixed_zip(tok, {'xl/worksheets/sheet1.xml'})
+
+
+# ------------------------------------------------------- Терминальный сервер
+def build_terminal():
+    """Лист «6.Терминальный сервер»: заявка на изменение правил МЭ (группа
+    AD_RNSK_TRM_Users_WS). Коллективная таблица на одного человека:
+    D14 — ФИО, E14 — наименование ПКЗИ."""
+    return build_sheet('6.Терминальный сервер',
+                       {'D14': '{{FIO}}', 'E14': '{{KEY}}'}, 'terminal.xlsx')
+
+
+# --------------------------------------------------------- Учётная запись
+def build_account():
+    """Лист «2.УЗ» (головной офис): создание учётной записи в домене
+    rosneft.ru. Бланк заодно просит создать почтовый ящик (E12 — фикс. текст),
+    поэтому у головного отдельной заявки на почту нет. Коллективная таблица
+    на одного: B12 — ФИО/должность/телефон, D12 — основание (приказ),
+    D16 — подразделение."""
+    return build_sheet('2.УЗ', {
+        'B12': '{{WORKER}}',
+        'D12': 'Приказ о приеме на работу {{ORDER}}',
+        'D16': '{{PODR}}',
+    }, 'account.xlsx')
+
+
+def build_account_fil():
+    """Лист «УЗ (Филиал)»: создание учётной записи через ООО ИК «СИБИНТЕК»
+    (группа PKZI_EKTS_EX_Clients_CDC). На одного: B16 — ФИО/должность/телефон,
+    C16 — Общество Группы, D16 — подразделение."""
+    return build_sheet('УЗ (Филиал)', {
+        'B16': '{{WORKER}}',
+        'C16': 'ООО «РН-СтройКонтроль»',
+        'D16': '{{PODR}}',
+    }, 'account_fil.xlsx')
+
+
+def build_mail_fil():
+    """Лист «ПЯ (Филиал)»: создание почтового ящика в домене rosneft.ru
+    (филиал). C13 — ФИО/должность/телефон, C16 — объём ящика (Гб),
+    C18 — подразделение, C19 — имя УЗ в домене, C20 — имя сертификата ПКЗИ,
+    C21 — руководитель (ФИО/должность/телефон)."""
+    return build_sheet('ПЯ (Филиал)', {
+        'C13': '{{WORKER}}',
+        'C16': '{{SIZE}}',
+        'C18': '{{PODR}}',
+        'C19': '{{ACCOUNT}}',
+        'C20': '{{CERT}}',
+        'C21': '{{RUK}}',
+    }, 'mail_fil.xlsx')
 
 
 # реестр сборщиков: id системы -> функция, возвращающая bytes mixed-zip
@@ -218,6 +266,9 @@ BUILDERS = {
     'ai_lab': build_ai_lab,
     'pkzi': build_pkzi,
     'terminal': build_terminal,
+    'account': build_account,
+    'account_fil': build_account_fil,
+    'mail_fil': build_mail_fil,
 }
 
 
