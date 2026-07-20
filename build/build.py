@@ -185,6 +185,13 @@ def build_pkzi():
     # e-mail (T2 r1 c1)
     set_para(doc.tables[2].rows[1].cells[1].paragraphs[0], '{{EMAIL}}')
 
+    # Жёлтая подсветка в исходном бланке отмечает места для ручного заполнения.
+    # В автоматически заполненной заявке она не нужна — убираем её со всех
+    # фрагментов, не затрагивая остальное форматирование текста.
+    for highlight in list(doc.element.iter(qn('w:highlight'))):
+        if highlight.get(qn('w:val')) == 'yellow':
+            highlight.getparent().remove(highlight)
+
     # срок использования — НЕ заполняем (оставляем «___» 202_ пустыми)
 
     tok = os.path.join(OUT, 'pkzi.docx')
@@ -193,7 +200,7 @@ def build_pkzi():
 
 
 # --------------------------------------------------- листы ШаблонОбщий.xlsx
-def build_sheet(sheet, cells, out_name):
+def build_sheet(sheet, cells, out_name, merges=()):
     """Оставить в ШаблонОбщий.xlsx один лист `sheet`, вписать метки `cells`
     ({coord: '{{TOKEN}}'}), пересобрать. openpyxl пишет строки inline (без
     sharedStrings) → текстовая часть для замены — xl/worksheets/sheet1.xml.
@@ -205,6 +212,8 @@ def build_sheet(sheet, cells, out_name):
         if name != sheet:
             del wb[name]
     ws = wb[sheet]
+    for cell_range in merges:
+        ws.merge_cells(cell_range)
     for coord, val in cells.items():
         ws[coord] = val
     tok = os.path.join(OUT, out_name)
@@ -226,14 +235,17 @@ def build_account():
     """Лист «2.УЗ» (головной офис): создание учётной записи в домене
     rosneft.ru. Бланк заодно просит создать почтовый ящик (E12 — фикс. текст),
     поэтому у головного отдельной заявки на почту нет. Коллективная таблица
-    на одного: B12 — ФИО/должность/телефон, D12 — основание (приказ),
+    на одного: B12 — ФИО, B13 — должность, B14 — телефон,
+    D12:D14 — объединённое основание (приказ),
     D16 — подразделение. C1 — подписант «Подразделение ИТ» (Еременко А.С.)."""
     return build_sheet('2.УЗ', {
         'C1': 'Еременко А.С.',
-        'B12': '{{WORKER}}',
+        'B12': '{{FIO}}',
+        'B13': '{{POST}}',
+        'B14': '{{PHONE}}',
         'D12': 'Приказ о приеме на работу {{ORDER}}',
         'D16': '{{PODR}}',
-    }, 'account.xlsx')
+    }, 'account.xlsx', merges=('D12:D14',))
 
 
 def build_account_fil():
@@ -266,16 +278,21 @@ def build_ksed():
 
 def build_mail_fil():
     """Лист «ПЯ (Филиал)»: создание почтового ящика в домене rosneft.ru
-    (филиал). C13 — ФИО/должность/телефон, C16 — объём ящика (Гб),
+    (филиал). C13 — ФИО, C14 — должность, C15 — телефон,
+    C16 — объём ящика (Гб),
     C18 — подразделение, C19 — имя УЗ в домене, C20 — имя сертификата ПКЗИ,
-    C21 — руководитель (ФИО/должность/телефон)."""
+    C21 — ФИО руководителя, C22 — его должность, C23 — телефон."""
     return build_sheet('ПЯ (Филиал)', {
-        'C13': '{{WORKER}}',
+        'C13': '{{FIO}}',
+        'C14': '{{POST}}',
+        'C15': '{{PHONE}}',
         'C16': '{{SIZE}}',
         'C18': '{{PODR}}',
         'C19': '{{ACCOUNT}}',
         'C20': '{{CERT}}',
-        'C21': '{{RUK}}',
+        'C21': '{{RUK_FIO}}',
+        'C22': '{{RUK_POST}}',
+        'C23': '{{RUK_PHONE}}',
     }, 'mail_fil.xlsx')
 
 
