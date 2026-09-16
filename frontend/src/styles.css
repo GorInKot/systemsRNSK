@@ -1,0 +1,737 @@
+/* ==========================================================================
+   Дизайн-токены
+   Стиль: Minimalism & Swiss Style — монохромная база (чёрный/серый/белый) +
+   один акцентный цвет (жёлтый), строгая сетка, чёткая иерархия, без лишнего
+   декора. Подходит для корпоративных инструментов и внутренних порталов.
+
+   Фирменные цвета (заданы заказчиком):
+     Жёлтый       #F5D80B
+     Чёрный       #010206
+     Тёмно-серый  #393939
+     Серый        #B9B9B9
+     Белый        #FFFFFF
+
+   Шрифт — системный стек (без внешних шрифтов/CDN: интерфейс, как и соседняя
+   вкладка портала «Заявки на автоматизацию», может работать в закрытом
+   контуре без доступа в интернет). Segoe UI — родной шрифт Windows с полной
+   поддержкой кириллицы, поэтому стоит первым после -apple-system.
+   ========================================================================== */
+
+:root {
+  /* --- Фирменная палитра (не менять без согласования) ------------------- */
+  --brand-yellow: #f5d80b;
+  --brand-black: #010206;
+  --brand-gray-900: #393939;
+  --brand-gray-400: #b9b9b9;
+  --brand-white: #ffffff;
+
+  /* --- Производные нейтральные оттенки ----------------------------------
+     Не входят в фирменную палитру напрямую: получены смешением белого и
+     серого, нужны для тонких границ и фоновых зон, где сам серый (#B9B9B9)
+     слишком тёмный (потерялась бы лёгкость минимализма). */
+  --neutral-50: #fafafa;
+  --neutral-100: #f2f2f2;
+  --neutral-200: #e6e6e6;
+
+  /* --- Семантические токены ---------------------------------------------- */
+  --bg: var(--neutral-100);
+  --surface: var(--brand-white);
+  --border: var(--neutral-200);
+  --border-strong: var(--brand-gray-400);
+
+  --text: var(--brand-black);
+  --text-muted: var(--brand-gray-900);
+  --text-on-accent: var(--brand-black);
+  --text-on-dark: var(--brand-white);
+
+  --accent: var(--brand-yellow);
+  --accent-strong: #dcc10a; /* акцент чуть темнее — hover/active, тот же тон, не новый цвет */
+  --focus-ring: var(--brand-yellow);
+
+  /* «Готово»/«в работе» переданы через нейтральную пару + акцент, а не через
+     дополнительный зелёный — это ближе к заданной палитре. Красный для ошибок
+     оставлен как единственное осознанное исключение: для сбоев и отмены
+     нужен цвет, однозначно читаемый как тревожный и не совпадающий с акцентом. */
+  --ok-bg: var(--neutral-100);
+  --ok-text: var(--brand-black);
+  --pending-bg: rgba(245, 216, 11, 0.16);
+  --pending-text: var(--brand-black);
+  --danger: #c0152b;
+  --danger-bg: #fbe9ea;
+
+  --shadow-sm: 0 1px 2px rgba(1, 2, 6, 0.06);
+  --shadow-md: 0 4px 16px rgba(1, 2, 6, 0.08);
+  --shadow-dialog: 0 16px 48px rgba(1, 2, 6, 0.24);
+
+  /* --- Скругления: единая шкала, применяется везде, где это уместно ------ */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 999px;
+
+  /* --- Отступы: шаг 8px ---------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --font-sans: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --control-height: 40px;
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+/* Единый видимый фокус для клавиатурной навигации — акцентный жёлтый,
+   с отступом, чтобы не сливаться с рамкой самого элемента. */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* --- Шапка ------------------------------------------------------------- */
+
+.topbar {
+  background: var(--brand-black);
+  border-bottom: 1px solid var(--brand-black);
+}
+
+.topbar__inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  height: 60px;
+}
+
+.topbar__title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-on-dark);
+  text-decoration: none;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.topbar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1;
+  flex-wrap: wrap;
+  height: 100%;
+}
+
+.topbar__link {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.68);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 0 var(--space-3);
+  border-bottom: 2px solid transparent;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.topbar__link:hover {
+  color: var(--text-on-dark);
+}
+
+.topbar__link.active,
+.topbar__link[aria-current="page"] {
+  color: var(--text-on-dark);
+  border-bottom-color: var(--accent);
+}
+
+.topbar__side {
+  margin-left: auto;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.dev-switch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dev-switch__tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-on-accent);
+  background: var(--accent);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+}
+
+.dev-switch select {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius-sm);
+  padding: 6px var(--space-2);
+  background: transparent;
+  color: var(--text-on-dark);
+}
+
+.dev-switch select option {
+  color: var(--text);
+}
+
+/* --- Общая раскладка страницы -------------------------------------------- */
+
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5);
+}
+
+.page--narrow {
+  max-width: 640px;
+}
+
+.page h1 {
+  margin: 0 0 var(--space-2);
+  font-size: 24px;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.small {
+  font-size: 13px;
+}
+
+/* --- Панель инструментов (поиск/импорт/экспорт) -------------------------- */
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-5) 0;
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+}
+
+.bar input[type="search"] {
+  flex: 1;
+  min-width: 220px;
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.tools {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* --- Кнопки -------------------------------------------------------------- */
+
+button {
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.btn--secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: var(--bg);
+}
+
+.btn--small {
+  height: 34px;
+  padding: 0 var(--space-3);
+  font-size: 13px;
+}
+
+/* --- Сетка карточек заявок ------------------------------------------------ */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: box-shadow var(--transition-base);
+}
+
+.card__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--neutral-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex: none;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.card__desc {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.card--hl {
+  background: var(--accent);
+  border-color: var(--accent-strong);
+}
+
+.card--hl,
+.card--hl .card__desc,
+.card--hl h3 {
+  color: var(--text-on-accent);
+}
+
+.card--hl .card__icon {
+  background: rgba(1, 2, 6, 0.08);
+}
+
+.card--locked {
+  opacity: 0.68;
+}
+
+.card__missing {
+  color: var(--pending-text);
+  background: var(--pending-bg);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: 12px;
+  margin: 0;
+}
+
+.card--hl .card__missing {
+  background: rgba(1, 2, 6, 0.1);
+}
+
+.card__choice {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.card--hl .card__choice {
+  color: var(--text-on-accent);
+}
+
+.card__choice select {
+  width: 100%;
+  height: var(--control-height);
+  margin-top: var(--space-2);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.card--hl .card__choice select {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(1, 2, 6, 0.25);
+}
+
+.card__acts {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: auto;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  font-weight: 600;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  width: fit-content;
+}
+
+.status--done {
+  color: var(--ok-text);
+  background: var(--ok-bg);
+  border: 1px solid var(--border);
+}
+
+.status--locked {
+  color: var(--text-muted);
+  background: var(--neutral-100);
+}
+
+.card--hl .status--locked {
+  background: rgba(1, 2, 6, 0.1);
+  color: var(--text-on-accent);
+}
+
+.card--hl .status--done {
+  background: var(--brand-black);
+  color: var(--text-on-dark);
+  border-color: var(--brand-black);
+}
+
+/* --- Форма анкеты ---------------------------------------------------------- */
+
+.sect {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+.sect legend {
+  font-size: 15px;
+  font-weight: 700;
+  padding: 0 var(--space-1);
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4) var(--space-4);
+}
+
+.field {
+  min-width: 0;
+}
+
+.field.wide {
+  grid-column: 1 / -1;
+}
+
+.field-block label,
+.field-block > label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.field-block input,
+.field-block select {
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  transition: border-color var(--transition-fast);
+}
+
+.field-block input:focus,
+.field-block select:focus {
+  border-color: var(--brand-black);
+}
+
+.field-block input:disabled {
+  background: var(--bg);
+  color: var(--brand-gray-400);
+}
+
+.field-check {
+  align-self: end;
+  padding-bottom: var(--space-2);
+}
+
+.field-check .check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand-black);
+  flex: none;
+}
+
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.checks label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 400;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* --- Таблицы (реестр, журнал) ---------------------------------------------- */
+
+.table-wrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+th,
+td {
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: var(--neutral-50);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  width: 1%;
+}
+
+.th-sort {
+  background: none;
+  border: none;
+  height: auto;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.row-clickable {
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.row-clickable:hover {
+  background: var(--neutral-50);
+}
+
+/* --- Диалоги ----------------------------------------------------------- */
+
+.dialog {
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 0;
+  box-shadow: var(--shadow-dialog);
+  max-width: 640px;
+  width: calc(100vw - var(--space-5) * 2);
+}
+
+.dialog::backdrop {
+  background: rgba(1, 2, 6, 0.5);
+}
+
+.dialog__form {
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog__head {
+  padding: var(--space-5) var(--space-5) 0;
+}
+
+.dialog__head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.dialog__body {
+  padding: var(--space-4) var(--space-5);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.dialog__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+/* --- Состояния (загрузка, ошибки, пусто) -------------------------------- */
+
+.loading {
+  padding: var(--space-7) var(--space-5);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.alert {
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.alert--danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.alert__title {
+  font-weight: 700;
+  margin-bottom: var(--space-1);
+}
+
+.card.empty {
+  text-align: center;
+  padding: var(--space-7) var(--space-5);
+}
+
+/* --- Пагинация ----------------------------------------------------------- */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.pagination .row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+@media (max-width: 640px) {
+  .cols {
+    grid-template-columns: 1fr;
+  }
+
+  .page {
+    padding: var(--space-4);
+  }
+}

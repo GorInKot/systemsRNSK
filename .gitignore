@@ -6,3 +6,15 @@ build/tokenized/
 # анкеты/реестры сотрудников — персональные данные, в git не попадают
 анкета*.json
 сотрудники*.json
+
+# backend (Python)
+backend/.venv/
+backend/**/__pycache__/
+backend/.pytest_cache/
+
+# frontend (Node)
+frontend/node_modules/
+frontend/dist/
+
+# секреты и локальные настройки развёртывания
+.env
