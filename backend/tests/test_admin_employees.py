@@ -50,29 +50,6 @@ def test_admin_create_update_delete_employee(admin):
     assert admin.put(f"/api/admin/employees/{employee_id}", json={"full_name": "x"}).status_code == 404
 
 
-def test_admin_export_returns_xlsx(admin, applicant):
-    applicant.put("/api/profile", json=FULL_PROFILE)
-    response = admin.get("/api/admin/employees/export")
-    assert response.status_code == 200
-    assert response.headers["content-type"].startswith("application/vnd.openxmlformats-officedocument.spreadsheetml")
-
-
-def test_admin_import_creates_and_updates(admin, applicant):
-    profile_id = applicant.get("/api/profile").json()["id"]
-    result = admin.post(
-        "/api/admin/employees/import",
-        json=[
-            {"id": profile_id, "full_name": "Иванов Иван Иванович (обновлён импортом)"},
-            {"full_name": "Совсем Новый Сотрудник"},
-        ],
-    )
-    assert result.status_code == 200
-    assert result.json() == {"created": 1, "updated": 1}
-
-    updated_profile = admin.get("/api/admin/employees", params={"search": "обновлён"}).json()
-    assert updated_profile["total"] == 1
-
-
 def test_generated_requests_are_logged_for_admin(admin, applicant):
     applicant.put("/api/profile", json=FULL_PROFILE)
     applicant.post("/api/systems/account/generate", json={})

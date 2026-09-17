@@ -83,11 +83,6 @@ class EmployeeAdminOut(ProfileOut):
     pass
 
 
-class EmployeeImportResult(BaseModel):
-    created: int
-    updated: int
-
-
 class GenerateIn(BaseModel):
     choice: str | None = None
 

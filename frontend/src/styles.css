@@ -574,16 +574,20 @@ input[type="checkbox"] {
 
 table {
   border-collapse: collapse;
+  table-layout: fixed;
   width: 100%;
+  min-width: 860px;
   font-size: 14px;
-  white-space: nowrap;
+  line-height: 1.4;
 }
 
 th,
 td {
   text-align: left;
+  vertical-align: top;
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
 }
 
 th {
@@ -593,20 +597,48 @@ th {
   text-transform: uppercase;
   letter-spacing: 0.02em;
   background: var(--neutral-50);
+  white-space: normal;
+  vertical-align: middle;
 }
 
 tbody tr:last-child td {
   border-bottom: none;
 }
 
+/* Ячейка «заголовок + подпись» (ФИО + должность, руководитель, номер приказа и т.д.) */
+.cell__title {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.cell__meta {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.cell__empty {
+  color: var(--text-muted);
+}
+
 .col-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
-  width: 1%;
+  width: 56px;
+  white-space: nowrap;
+}
+
+.col-actions {
+  width: 96px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   background: none;
   border: none;
   height: auto;
@@ -615,6 +647,41 @@ tbody tr:last-child td {
   color: inherit;
   font-weight: 600;
   cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.th-sort:hover {
+  color: var(--text);
+}
+
+.th-sort--active {
+  color: var(--text);
+}
+
+.th-sort__arrow {
+  font-size: 11px;
+  color: var(--brand-gray-400);
+}
+
+.th-sort--active .th-sort__arrow {
+  color: var(--accent-strong);
+}
+
+.btn-ghost-danger {
+  height: auto;
+  padding: var(--space-1) var(--space-2);
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  border-radius: var(--radius-sm);
+}
+
+.btn-ghost-danger:hover:not(:disabled) {
+  color: var(--danger);
+  background: var(--danger-bg);
 }
 
 .row-clickable {

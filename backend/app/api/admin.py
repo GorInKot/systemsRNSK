@@ -1,5 +1,3 @@
-from urllib.parse import quote
-
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
@@ -8,8 +6,7 @@ from app.auth import require_admin
 from app.db import get_db
 from app.errors import not_found
 from app.models import EmployeeProfile, GeneratedRequest, User
-from app.schemas import EmployeeAdminIn, EmployeeAdminOut, EmployeeImportResult, EmployeePage, GeneratedRequestOut, GeneratedRequestPage
-from app.services.export import export_employees_xlsx
+from app.schemas import EmployeeAdminIn, EmployeeAdminOut, EmployeePage, GeneratedRequestOut, GeneratedRequestPage
 from app.services.profiles import apply_profile_input
 
 router = APIRouter(prefix="/admin", tags=["Администрирование"])
@@ -71,30 +68,6 @@ def delete_employee(employee_id: int, _: User = Depends(require_admin), db: Sess
         db.delete(profile)
         db.commit()
     return Response(status_code=204)
-
-
-@router.get("/employees/export")
-def export_employees(_: User = Depends(require_admin), db: Session = Depends(get_db)) -> Response:
-    employees = list(db.scalars(select(EmployeeProfile).order_by(EmployeeProfile.full_name)))
-    content = export_employees_xlsx(employees)
-    headers = {"Content-Disposition": f"attachment; filename*=UTF-8''{quote('Сотрудники.xlsx')}"}
-    return Response(content=content, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers=headers)
-
-
-@router.post("/employees/import", response_model=EmployeeImportResult)
-def import_employees(payload: list[EmployeeAdminIn], _: User = Depends(require_admin), db: Session = Depends(get_db)) -> EmployeeImportResult:
-    created = updated = 0
-    for item in payload:
-        profile = db.get(EmployeeProfile, item.id) if item.id else None
-        if profile is None:
-            profile = EmployeeProfile()
-            db.add(profile)
-            created += 1
-        else:
-            updated += 1
-        apply_profile_input(profile, item)
-    db.commit()
-    return EmployeeImportResult(created=created, updated=updated)
 
 
 @router.get("/requests", response_model=GeneratedRequestPage)

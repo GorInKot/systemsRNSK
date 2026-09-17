@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
 import type {
   EmployeeAdmin,
-  EmployeeImportResult,
   EmployeePage,
   GeneratedRequestPage,
   Me,
@@ -74,14 +73,6 @@ export function useDeleteEmployee() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api<void>(`/admin/employees/${id}`, { method: "DELETE" }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "employees"] }),
-  });
-}
-
-export function useImportEmployees() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: unknown[]) => api<EmployeeImportResult>("/admin/employees/import", { method: "POST", body: payload }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "employees"] }),
   });
 }

@@ -6,5 +6,4 @@ alembic>=1.13
 pydantic>=2.7,<3
 pydantic-settings>=2.3
 pyjwt[crypto]>=2.8
-openpyxl>=3.1
 tzdata>=2024.1

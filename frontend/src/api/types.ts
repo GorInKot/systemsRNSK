@@ -88,8 +88,3 @@ export interface GeneratedRequestPage {
   items: GeneratedRequest[];
   total: number;
 }
-
-export interface EmployeeImportResult {
-  created: number;
-  updated: number;
-}
