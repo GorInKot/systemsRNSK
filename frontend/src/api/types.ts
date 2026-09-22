@@ -46,6 +46,7 @@ export interface Profile {
   manager_phone: string;
   vkd_action: string | null;
   vkd_rooms: string[];
+  seid_role: string | null;
 }
 
 export type ProfileInput = Omit<Profile, "id" | "user_id" | "updated_at">;

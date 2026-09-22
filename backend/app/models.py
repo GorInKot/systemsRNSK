@@ -79,6 +79,9 @@ class EmployeeProfile(TimestampMixin, Base):
     vkd_action: Mapped[str | None] = mapped_column(String(256))
     vkd_rooms: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
 
+    # Роль в ИР СЭИД — для заявки ЦУС (добавление в группы ПКЗИ).
+    seid_role: Mapped[str | None] = mapped_column(String(256))
+
     user: Mapped[User | None] = relationship()
     generated_requests: Mapped[list[GeneratedRequest]] = relationship(back_populates="employee_profile", order_by="GeneratedRequest.created_at.desc()")
 

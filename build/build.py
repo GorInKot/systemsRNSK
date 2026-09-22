@@ -103,6 +103,35 @@ def repl_runs(par, start, end, token):
         runs[i].text = ''
 
 
+def underline_token(par, prefix, token, suffix=''):
+    """Заменить первый run параграфа на prefix + token + suffix: token выходит
+    подчёркнутым (имитирует заполненную «___» линию бланка), prefix/suffix — обычным
+    начертанием исходного run (шрифт/размер копируются в новые runs). Остальные runs
+    параграфа (если есть) не трогаем — они остаются сразу после вставленных.
+
+    ``paragraph.add_run`` всегда добавляет run в конец параграфа, поэтому новые runs
+    сперва создаются там, а затем переставляются на место первого run через
+    ``addnext`` (в обратном порядке — suffix, потом token, — чтобы после каждой
+    перестановки порядок token→suffix не ломался)."""
+    import copy
+    from docx.oxml.ns import qn
+    template = par.runs[0]
+    rpr = template._element.find(qn('w:rPr'))
+    template.text = prefix
+    token_run = par.add_run(token)
+    if rpr is not None:
+        token_run._element.insert(0, copy.deepcopy(rpr))
+    token_run.underline = True
+    suffix_run = None
+    if suffix:
+        suffix_run = par.add_run(suffix)
+        if rpr is not None:
+            suffix_run._element.insert(0, copy.deepcopy(rpr))
+    if suffix_run is not None:
+        template._element.addnext(suffix_run._element)
+    template._element.addnext(token_run._element)
+
+
 def preserve_space(par, run=0):
     """xml:space="preserve" на w:t run'а — чтобы Word не съедал пробелы,
     которыми браузер дополняет значение метки до фиксированной ширины."""
@@ -296,6 +325,78 @@ def build_mail_fil():
     }, 'mail_fil.xlsx')
 
 
+# ------------------------------------------------------------------ ЦУС
+def build_tsus():
+    """Файл «Заявка ЦУС.xlsx» (добавление в группы ПКЗИ для доступа к ИР СЭИД),
+    один лист «ЗаявкаЦУС». Строка 9 — пример сотрудника; ОГ (D9) — фиксированный
+    текст (сотрудники «РН-СтройКонтроль»), не трогаем."""
+    import openpyxl
+    src = os.path.join(TYPES, 'Заявка ЦУС.xlsx')
+    wb = openpyxl.load_workbook(src)
+    ws = wb.active
+    ws['E9'] = '{{FIO}}'
+    ws['F9'] = '{{POST}}'
+    ws['G9'] = '{{EMAIL}}'
+    ws['H9'] = '{{ACCOUNT}}'
+    ws['I9'] = '{{CERT}}'
+    ws['J9'] = '{{ROLE}}'
+    tok = os.path.join(OUT, 'tsus.xlsx')
+    wb.save(tok)
+    return mixed_zip(tok, {'xl/worksheets/sheet1.xml'})
+
+
+# ------------------------------------------------------------------ СИМ
+def build_sim():
+    """Файл «Заявка СИМ-карта.docx» (выдача/переоформление SIM-карты). Тип/размер
+    SIM и переоформление на физ.лицо/ООО — отмечаются от руки (в бланке нет
+    чекбокс-символов, только подписи вариантов через «Нужное отметить»),
+    паспортные данные, дата рождения, адрес, Госуслуги — тоже от руки
+    (персональные данные, которых нет в анкете)."""
+    from docx import Document
+    src = os.path.join(TYPES, 'Заявка СИМ-карта.docx')
+    doc = Document(src)
+    t0 = doc.tables[0]
+    t0.rows[0].cells[1].text = '{{FIO}}'
+    t0.rows[1].cells[1].text = '{{PODR}}'
+    t0.rows[2].cells[1].text = '{{POST}}'
+    t0.rows[5].cells[1].text = '{{EMAIL}}'
+
+    # подпись работника (согласие на обработку ПДн): «/_____/» → «/{{FIO_SIGN}}/»
+    doc.paragraphs[11].runs[0].text = '/{{FIO_SIGN}}/'
+    # «Согласовано»: должность руководителя (подчёркнутая — как заполненная линия бланка) и ФИО
+    underline_token(doc.paragraphs[18], '', '{{RUK_POST}}')
+    doc.paragraphs[21].runs[0].text = '/{{RUK_FIO}}/'
+
+    # поле «Подпись» в обоих блоках (работник и руководитель) — удлиняем линию
+    # на 8 подчёркиваний (было 14, стало 22): после подстановки ФИО в те же
+    # строки места под реальную подпись остаётся визуально меньше, чем в
+    # исходном пустом бланке.
+    for idx in (11, 21):
+        signature_run = doc.paragraphs[idx].runs[1]
+        signature_run.text = signature_run.text.replace('______________', '______________' + '________', 1)
+
+    tok = os.path.join(OUT, 'sim.docx')
+    doc.save(tok)
+    return mixed_zip(tok, DOCX_TEXT_PARTS)
+
+
+def build_sim_deduction():
+    """Файл «Заявление об удержании СИМ.docx» (согласие на удержание из
+    зарплаты суммы превышения лимита связи). Три строки данных заявителя —
+    значения подчёркнуты, как заполненная от руки линия бланка; номер
+    телефона и подпись/дата — от руки."""
+    from docx import Document
+    src = os.path.join(TYPES, 'Заявление об удержании СИМ.docx')
+    doc = Document(src)
+    underline_token(doc.paragraphs[3], 'от  ', '{{POST}}')
+    underline_token(doc.paragraphs[4], '', '{{PODR}}')
+    underline_token(doc.paragraphs[5], '', '{{FIO}}', '  (Должность/')
+
+    tok = os.path.join(OUT, 'sim_deduction.docx')
+    doc.save(tok)
+    return mixed_zip(tok, DOCX_TEXT_PARTS)
+
+
 # ------------------------------------------------------------------ ВКД
 def build_vkd():
     """Файл «Заявка ВКД.xlsx» (ИС «Виртуальные комнаты данных»), один лист.
@@ -349,6 +450,9 @@ BUILDERS = {
     'mail_fil': build_mail_fil,
     'ksed': build_ksed,
     'vkd': build_vkd,
+    'tsus': build_tsus,
+    'sim': build_sim,
+    'sim_deduction': build_sim_deduction,
 }
 
 

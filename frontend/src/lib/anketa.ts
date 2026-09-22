@@ -64,6 +64,12 @@ export const ANKETA: AnketaSection[] = [
       { name: "vkd_rooms", label: "Наименование ВКД (можно несколько)", type: "checks", options: VKD_ROOMS, wide: true },
     ],
   },
+  {
+    title: "Параметры ЦУС",
+    fields: [
+      { name: "seid_role", label: "Роль в ИР СЭИД", wide: true, placeholder: "(Строительный контроль) - Инженер СК" },
+    ],
+  },
 ];
 
 export const OFFICE_LABELS: Record<string, string> = { head_office: "Головной офис", branch: "Филиал" };

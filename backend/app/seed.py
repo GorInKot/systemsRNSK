@@ -51,6 +51,7 @@ def seed(reset: bool) -> None:
             pkzi_name="StroyKontrol_IvanovII", manager_full_name="Сидоров Сидор Сидорович",
             manager_position="начальник отдела", manager_phone="+7 900 000-33-44",
             vkd_action=VKD_ACTIONS[0], vkd_rooms=["РНСК", "РНСК КомНПЗ"],
+            seid_role="(Строительный контроль) - Инженер СК",
         ))
 
         # Сотрудница филиала, анкета пока не заполнена (только что вошла в систему первый раз).

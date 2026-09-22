@@ -63,6 +63,36 @@ def test_generate_pkzi_marks_the_chosen_checkbox(applicant):
         assert "☒" in document
 
 
+def test_generate_tsus_fills_real_template(applicant):
+    applicant.put("/api/profile", json=FULL_PROFILE)
+    response = applicant.post("/api/systems/tsus/generate", json={})
+    assert response.status_code == 200
+    with zipfile.ZipFile(BytesIO(response.content)) as archive:
+        sheet = archive.read("xl/worksheets/sheet1.xml").decode("utf-8")
+        assert "(Строительный контроль) - Инженер СК" in sheet
+        assert "{{" not in sheet
+
+
+def test_generate_sim_fills_real_template(applicant):
+    applicant.put("/api/profile", json=FULL_PROFILE)
+    response = applicant.post("/api/systems/sim/generate", json={})
+    assert response.status_code == 200
+    with zipfile.ZipFile(BytesIO(response.content)) as archive:
+        document = archive.read("word/document.xml").decode("utf-8")
+        assert "Иванов Иван Иванович" in document
+        assert "{{" not in document
+
+
+def test_generate_sim_deduction_fills_real_template(applicant):
+    applicant.put("/api/profile", json=FULL_PROFILE)
+    response = applicant.post("/api/systems/sim_deduction/generate", json={})
+    assert response.status_code == 200
+    with zipfile.ZipFile(BytesIO(response.content)) as archive:
+        document = archive.read("word/document.xml").decode("utf-8")
+        assert "Иванов Иван Иванович" in document
+        assert "{{" not in document
+
+
 def test_generate_unready_system_is_rejected(applicant):
     applicant.put("/api/profile", json=FULL_PROFILE)
     response = applicant.post("/api/systems/sap/generate", json={})

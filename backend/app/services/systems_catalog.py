@@ -57,6 +57,7 @@ FIELD_LABELS = {
     "manager_phone": "Телефон руководителя",
     "vkd_action": "Действие ВКД",
     "vkd_rooms": "Наименование ВКД",
+    "seid_role": "Роль в ИР СЭИД",
 }
 
 DOCX_PART = {"word/document.xml"}
@@ -106,6 +107,7 @@ def profile_to_dict(profile: EmployeeProfile) -> dict:
         "manager_phone": profile.manager_phone,
         "vkd_action": profile.vkd_action,
         "vkd_rooms": list(profile.vkd_rooms or []),
+        "seid_role": profile.seid_role,
     }
 
 
@@ -243,6 +245,25 @@ def _terminal_map_values(d: dict) -> dict:
     return {"FIO": d.get("full_name") or "", "KEY": d.get("pkzi_name") or ""}
 
 
+def _tsus_map_values(d: dict) -> dict:
+    return {
+        "FIO": d.get("full_name") or "", "POST": d.get("position") or "", "EMAIL": d.get("email") or "",
+        "ACCOUNT": d.get("account_name") or "", "CERT": d.get("pkzi_name") or "", "ROLE": d.get("seid_role") or "",
+    }
+
+
+def _sim_map_values(d: dict) -> dict:
+    return {
+        "FIO": d.get("full_name") or "", "PODR": d.get("department") or "", "POST": d.get("position") or "",
+        "EMAIL": d.get("email") or "", "FIO_SIGN": d.get("full_name") or "",
+        "RUK_POST": d.get("manager_position") or "", "RUK_FIO": d.get("manager_full_name") or "",
+    }
+
+
+def _sim_deduction_map_values(d: dict) -> dict:
+    return {"POST": d.get("position") or "", "PODR": d.get("department") or "", "FIO": d.get("full_name") or ""}
+
+
 def _ai_lab_map_values(d: dict) -> dict:
     today = dt.date.today()
     day = str(today.day)  # без ведущего нуля — как в прежнем шаблоне
@@ -295,6 +316,30 @@ SYSTEMS: list[System] = [
         text_parts=XLSX_PART, template="ksed",
         file_name=lambda d: f"Заявка_КСЭД_{safe(d.get('full_name'))}.xlsx",
         map_values=_ksed_map_values,
+    ),
+    System(
+        id="tsus", title="ЦУС / СЭИД", icon="🏗️",
+        desc="Добавление в группы ПКЗИ для работы в веб-приложении ИР СЭИД (Центр управления строительством).",
+        need=["full_name", "position", "email", "account_name", "pkzi_name", "seid_role"],
+        text_parts=XLSX_PART, template="tsus",
+        file_name=lambda d: f"Заявка_ЦУС_{safe(d.get('full_name'))}.xlsx",
+        map_values=_tsus_map_values,
+    ),
+    System(
+        id="sim", title="SIM-карта", icon="📱",
+        desc="Заявка на выдачу или переоформление корпоративной SIM-карты. Паспортные данные, адрес и параметры карты — заполняются от руки.",
+        need=["full_name", "department", "position", "manager_full_name", "manager_position"],
+        text_parts=DOCX_PART, template="sim",
+        file_name=lambda d: f"Заявка_СИМ_{safe(d.get('full_name'))}.docx",
+        map_values=_sim_map_values,
+    ),
+    System(
+        id="sim_deduction", title="Удержание за перелимит связи", icon="💳",
+        desc="Согласие на ежемесячное удержание из зарплаты суммы превышения лимита на телефонные переговоры.",
+        need=["full_name", "department", "position"],
+        text_parts=DOCX_PART, template="sim_deduction",
+        file_name=lambda d: f"Заявление_Удержание_СИМ_{safe(d.get('full_name'))}.docx",
+        map_values=_sim_deduction_map_values,
     ),
     System(id="sap", title="SAP", icon="📊", desc="Доступ к системе SAP.", need=[], ready=False),
     System(id="c1", title="1С", icon="🧮", desc="Доступ к системе «1С».", need=[], ready=False),

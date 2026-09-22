@@ -65,6 +65,7 @@ class ProfileIn(BaseModel):
     manager_phone: str = ""
     vkd_action: str | None = None
     vkd_rooms: list[str] = Field(default_factory=list)
+    seid_role: str | None = None
 
 
 class ProfileOut(ProfileIn):
