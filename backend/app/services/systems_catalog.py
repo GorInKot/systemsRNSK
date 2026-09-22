@@ -248,6 +248,9 @@ def _terminal_map_values(d: dict) -> dict:
     return {"FIO": d.get("full_name") or "", "KEY": d.get("pkzi_name") or ""}
 
 
+# Заявки ЦУС/SIM/1С:ПБиОТ (4 функции ниже + записи SYSTEMS с этими id) со временем переносятся
+# на основной портал с другой архитектурой — таблицы токенов и что для переноса нужно, а что
+# нет, см. в PORTING.md в корне репозитория.
 def _tsus_map_values(d: dict) -> dict:
     return {
         "FIO": d.get("full_name") or "", "POST": d.get("position") or "", "EMAIL": d.get("email") or "",
