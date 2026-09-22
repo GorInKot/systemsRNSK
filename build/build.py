@@ -152,6 +152,18 @@ def unwrap_sdt(sdt):
     parent.remove(sdt)
 
 
+def sym_to_token(run, token):
+    """Заменить run-чекбокс, отрисованный шрифтовым символом (``<w:sym w:font="Wingdings"
+    .../>`` — пустой квадрат, без интерактивности и без пары «отмеченный» символ в этом же
+    шрифте), обычным текстовым токеном. На сервере он подставится реальным ☒/☐ (Arial),
+    как везде в остальных бланках."""
+    from docx.oxml.ns import qn
+    sym = run._element.find(qn('w:sym'))
+    if sym is not None:
+        run._element.remove(sym)
+    run.text = token
+
+
 # ------------------------------------------------------------------ ПКЗИ
 def build_pkzi():
     from docx import Document
@@ -397,6 +409,48 @@ def build_sim_deduction():
     return mixed_zip(tok, DOCX_TEXT_PARTS)
 
 
+# ------------------------------------------------------------------ 1С:ПБиОТ
+def build_c1_pbiot():
+    """Файл «Заявка 1С ПБиОТ.docx» (управление доступом к ИР 1С:ПБиОТ — охрана
+    труда). Таблица пользователя (табл. 2) содержит ДВА примера сотрудников
+    (строки 4–5) — заполняем первый, второй вычищаем. Чекбоксы действия
+    («предоставить полномочия» / «прекратить доступ», строка 1) в исходнике —
+    не текст ☐/☒, а шрифтовый символ Wingdings (``<w:sym>``): переводим в
+    обычный текстовый токен через sym_to_token. Список ролей (24 пункта,
+    табл. 3) и тип подключения ЕКТС/не ЕКТС — вообще без чекбоксов, отмечаются
+    от руки — таблицу ролей не трогаем."""
+    from docx import Document
+    src = os.path.join(TYPES, 'Заявка 1С ПБиОТ.docx')
+    doc = Document(src)
+
+    t2 = doc.tables[2]
+    t2.rows[0].cells[1].text = 'ООО «РН-СтройКонтроль»'
+
+    action_runs = t2.rows[1].cells[0].paragraphs[0].runs
+    sym_to_token(action_runs[2], '{{CHK_GRANT}}')
+    sym_to_token(action_runs[7], '{{CHK_REVOKE}}')
+
+    data = t2.rows[4].cells
+    data[0].text = '{{FIO}}'
+    data[1].text = '{{PODR_POST}}'
+    data[2].text = '{{RUK}}'
+    data[3].text = '{{EMAIL}}'
+    data[4].text = '{{PHONE}}'         # столбцы 4–5 объединены (телефон)
+    data[6].text = ''                  # «рабочее место» — нет такого поля в анкете
+    data[7].text = '{{ACCOUNT}}'
+    data[8].text = '{{CERT}}'
+    data[9].text = 'Нет'               # «ограничения доступа к данным» — по умолчанию нет
+    data[10].text = ''                 # «подпись работника» — от руки
+    for cell in t2.rows[5].cells:      # второй сотрудник-пример — вычищаем
+        cell.text = ''
+
+    doc.tables[6].rows[0].cells[0].text = '{{RUK_FIO_SIGN}}'
+
+    tok = os.path.join(OUT, 'c1_pbiot.docx')
+    doc.save(tok)
+    return mixed_zip(tok, DOCX_TEXT_PARTS)
+
+
 # ------------------------------------------------------------------ ВКД
 def build_vkd():
     """Файл «Заявка ВКД.xlsx» (ИС «Виртуальные комнаты данных»), один лист.
@@ -453,6 +507,7 @@ BUILDERS = {
     'tsus': build_tsus,
     'sim': build_sim,
     'sim_deduction': build_sim_deduction,
+    'c1_pbiot': build_c1_pbiot,
 }
 
 

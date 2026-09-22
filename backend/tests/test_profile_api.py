@@ -93,6 +93,17 @@ def test_generate_sim_deduction_fills_real_template(applicant):
         assert "{{" not in document
 
 
+def test_generate_c1_pbiot_marks_the_chosen_checkbox(applicant):
+    applicant.put("/api/profile", json=FULL_PROFILE)
+    response = applicant.post("/api/systems/c1_pbiot/generate", json={"choice": "прекратить доступ"})
+    assert response.status_code == 200
+    with zipfile.ZipFile(BytesIO(response.content)) as archive:
+        document = archive.read("word/document.xml").decode("utf-8")
+        assert "☒" in document
+        assert "Иванов Иван Иванович" in document
+        assert "{{" not in document
+
+
 def test_generate_unready_system_is_rejected(applicant):
     applicant.put("/api/profile", json=FULL_PROFILE)
     response = applicant.post("/api/systems/sap/generate", json={})

@@ -81,3 +81,18 @@ def test_sim_deduction_tokens_are_replaced():
         document = archive.read("word/document.xml").decode("utf-8")
         assert "Иванов Иван Иванович" in document
         assert TOKEN_PATTERN not in document
+
+
+def test_c1_pbiot_marks_the_chosen_checkbox():
+    values = {
+        "CHK_GRANT": "☒", "CHK_REVOKE": "☐", "FIO": "Иванов Иван Иванович",
+        "PODR_POST": "Группа сопровождения ИС, инженер", "RUK": "Сидоров Сидор Сидорович, начальник отдела, +7 900 000-33-44",
+        "EMAIL": "i.ivanov@rnsk.rosneft.ru", "PHONE": "+7 900 000-11-22", "ACCOUNT": "ROSNEFT\\i.ivanov",
+        "CERT": "StroyKontrol_IvanovII",
+        "RUK_FIO_SIGN": "Сидоров Сидор Сидорович",
+    }
+    result = fill_template("c1_pbiot", values, DOCX_PART)
+    with zipfile.ZipFile(io.BytesIO(result)) as archive:
+        document = archive.read("word/document.xml").decode("utf-8")
+        assert "☒" in document
+        assert TOKEN_PATTERN not in document

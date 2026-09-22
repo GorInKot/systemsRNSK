@@ -41,6 +41,9 @@ VKD_ACTIONS = [
 
 VKD_ROOMS = ["РНСК", "РНСК КомНПЗ", "РНСК Красноярск", "РНСК Тюмень", "РНСК Уфа"]
 
+# Действия бланка 1С:ПБиОТ (чекбоксы-символы Wingdings в исходнике, выбор одного пункта).
+C1_PBIOT_ACTIONS = ["предоставить полномочия", "прекратить доступ"]
+
 FIELD_LABELS = {
     "office": "Офис",
     "full_name": "Ф.И.О.",
@@ -264,6 +267,24 @@ def _sim_deduction_map_values(d: dict) -> dict:
     return {"POST": d.get("position") or "", "PODR": d.get("department") or "", "FIO": d.get("full_name") or ""}
 
 
+def _c1_pbiot_map_values(d: dict) -> dict:
+    box = lambda v: "☒" if v else "☐"  # noqa: E731
+    action = d.get("c1_pbiot_action") or C1_PBIOT_ACTIONS[0]
+    full_name = d.get("full_name") or ""
+    return {
+        "CHK_GRANT": box(action == C1_PBIOT_ACTIONS[0]),
+        "CHK_REVOKE": box(action == C1_PBIOT_ACTIONS[1]),
+        "FIO": full_name,
+        "PODR_POST": _join(d.get("department"), d.get("position")),
+        "RUK": _join(d.get("manager_full_name"), d.get("manager_position"), d.get("manager_phone")),
+        "EMAIL": "в процессе оформления" if d.get("no_email") else (d.get("email") or ""),
+        "PHONE": d.get("phone") or "",
+        "ACCOUNT": d.get("account_name") or "",
+        "CERT": d.get("pkzi_name") or "",
+        "RUK_FIO_SIGN": d.get("manager_full_name") or "",
+    }
+
+
 def _ai_lab_map_values(d: dict) -> dict:
     today = dt.date.today()
     day = str(today.day)  # без ведущего нуля — как в прежнем шаблоне
@@ -342,7 +363,20 @@ SYSTEMS: list[System] = [
         map_values=_sim_deduction_map_values,
     ),
     System(id="sap", title="SAP", icon="📊", desc="Доступ к системе SAP.", need=[], ready=False),
-    System(id="c1", title="1С", icon="🧮", desc="Доступ к системе «1С».", need=[], ready=False),
+    System(
+        id="c1_pbiot", title="1С:ПБиОТ", icon="🦺",
+        desc="Управление доступом к ИР 1С:ПБиОТ (охрана труда). Действие — на карточке; роли отмечаются от руки в распечатанном бланке.",
+        need=[
+            "full_name", "department", "position", "manager_full_name", "manager_position",
+            "manager_phone", "account_name", "pkzi_name",
+        ],
+        text_parts=DOCX_PART, template="c1_pbiot",
+        choice_field="c1_pbiot_action", choice_options=C1_PBIOT_ACTIONS,
+        file_name=lambda d: f"Заявка_1С_ПБиОТ_{safe(d.get('full_name'))}.docx",
+        map_values=_c1_pbiot_map_values,
+    ),
+    System(id="c1_zup", title="1С:ЗУП (кадры)", icon="🧮", desc="Доступ к КИС 1С ЗУП (кадровый учёт, ЕКШ).", need=[], ready=False),
+    System(id="c1_tis_samara", title="1С: ТИС СП Самара", icon="🧮", desc="Удалённый доступ к ИС 1С8 БУ и НУ СП Самара.", need=[], ready=False),
     System(
         id="vkd", title="ВКД", icon="🗄️",
         desc="Управление доступом к ИС «Виртуальные комнаты данных».",

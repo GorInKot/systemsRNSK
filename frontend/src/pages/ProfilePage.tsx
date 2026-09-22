@@ -28,11 +28,14 @@ export function ProfilePage() {
     setForm((prev) => (prev ? { ...prev, [name]: value } : prev));
   }
 
-  function toggleRoom(room: string) {
+  function toggleCheck(fieldName: string, option: string) {
     setForm((prev) => {
       if (!prev) return prev;
-      const has = prev.vkd_rooms.includes(room);
-      return { ...prev, vkd_rooms: has ? prev.vkd_rooms.filter((r) => r !== room) : [...prev.vkd_rooms, room] };
+      const current = (prev as unknown as Record<string, unknown>)[fieldName];
+      const values = Array.isArray(current) ? (current as string[]) : [];
+      const has = values.includes(option);
+      const next = has ? values.filter((v) => v !== option) : [...values, option];
+      return { ...prev, [fieldName]: next };
     });
   }
 
@@ -56,7 +59,7 @@ export function ProfilePage() {
           <div className="checks">
             {(field.options ?? []).map((option) => (
               <label key={option}>
-                <input type="checkbox" checked={selected.includes(option)} onChange={() => toggleRoom(option)} />
+                <input type="checkbox" checked={selected.includes(option)} onChange={() => toggleCheck(field.name, option)} />
                 {option}
               </label>
             ))}
