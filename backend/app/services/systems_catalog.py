@@ -44,6 +44,14 @@ VKD_ROOMS = ["РНСК", "РНСК КомНПЗ", "РНСК Красноярск
 # Действия бланка 1С:ПБиОТ (чекбоксы-символы Wingdings в исходнике, выбор одного пункта).
 C1_PBIOT_ACTIONS = ["предоставить полномочия", "прекратить доступ"]
 
+# Действия бланка ЕКТП (три квадрата-вложенные таблицы в исходнике, выбор одного пункта);
+# порядок = токены CHK_NEW / CHK_GRANT / CHK_REVOKE в шаблоне.
+EKTP_ACTIONS = [
+    "создать новую учетную запись",
+    "предоставить/изменить полномочия",
+    "прекратить доступ (отключить учетную запись)",
+]
+
 FIELD_LABELS = {
     "office": "Офис",
     "full_name": "Ф.И.О.",
@@ -151,6 +159,9 @@ class System:
     choice_options: list[str] | None = None
     file_name: Callable[[dict], str] | None = None
     map_values: Callable[[dict], dict] | None = None
+    # Заявки без бланка: карточка вместо кнопки «Создать и скачать» показывает этот текст
+    # (например, «напишите письмо туда-то») — см. id="tech_expert".
+    instruction: str | None = None
 
     def template_key(self, data: dict) -> str | None:
         return self.template(data) if callable(self.template) else self.template
@@ -288,6 +299,23 @@ def _c1_pbiot_map_values(d: dict) -> dict:
     }
 
 
+def _ektp_map_values(d: dict) -> dict:
+    action = d.get("ektp_action") or EKTP_ACTIONS[0]
+    mark = lambda i: "X" if action == EKTP_ACTIONS[i] else ""  # noqa: E731
+    return {
+        "PODR": d.get("department") or "",
+        "RAB": _join(d.get("full_name"), d.get("position"), d.get("phone")),
+        "RUK": _join(d.get("manager_full_name"), d.get("manager_position"), d.get("manager_phone")),
+        "ACCOUNT": d.get("account_name") or "",
+        "CERT": d.get("pkzi_name") or "",
+        "CHK_NEW": mark(0), "CHK_GRANT": mark(1), "CHK_REVOKE": mark(2),
+        # при отключении в этой же строке бланка нужна «причина отключения» — её знает только заявитель
+        "REASON": "" if action == EKTP_ACTIONS[2] else "Производственная необходимость",
+        "RUK_FIO_SIGN": d.get("manager_full_name") or "",
+        "FIO_SIGN": d.get("full_name") or "",
+    }
+
+
 def _ai_lab_map_values(d: dict) -> dict:
     today = dt.date.today()
     day = str(today.day)  # без ведущего нуля — как в прежнем шаблоне
@@ -378,6 +406,18 @@ SYSTEMS: list[System] = [
         file_name=lambda d: f"Заявка_1С_ПБиОТ_{safe(d.get('full_name'))}.docx",
         map_values=_c1_pbiot_map_values,
     ),
+    System(
+        id="ektp", title="ЕКТП", icon="🚚",
+        desc="Управление доступом к ИС «ЕКТП». Действие — на карточке; роли отмечаются от руки в распечатанном бланке.",
+        need=[
+            "department", "full_name", "position", "phone", "manager_full_name", "manager_position",
+            "manager_phone", "account_name", "pkzi_name",
+        ],
+        text_parts=DOCX_PART, template="ektp",
+        choice_field="ektp_action", choice_options=EKTP_ACTIONS,
+        file_name=lambda d: f"Заявка_ЕКТП_{safe(d.get('full_name'))}.docx",
+        map_values=_ektp_map_values,
+    ),
     System(id="c1_zup", title="1С:ЗУП (кадры)", icon="🧮", desc="Доступ к КИС 1С ЗУП (кадровый учёт, ЕКШ).", need=[], ready=False),
     System(id="c1_tis_samara", title="1С: ТИС СП Самара", icon="🧮", desc="Удалённый доступ к ИС 1С8 БУ и НУ СП Самара.", need=[], ready=False),
     System(
@@ -403,6 +443,16 @@ SYSTEMS: list[System] = [
         text_parts=DOCX_PART, template="ai_lab",
         file_name=lambda d: f"Заявка_ЛабИИ_{safe(d.get('full_name'))}.docx",
         map_values=_ai_lab_map_values,
+    ),
+    System(
+        id="tech_expert", title="ТехЭксперт", icon="🧰",
+        desc="Доступ к системе «ТехЭксперт».",
+        need=[],
+        instruction=(
+            "Бланка заявки для этой системы нет. Отправьте письмо на электронную почту "
+            "главных специалистов по ИТ филиалов: укажите Ф.И.О. и e-mail с фразой "
+            "«Прошу предоставить доступ»."
+        ),
     ),
 ]
 

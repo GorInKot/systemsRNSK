@@ -83,6 +83,22 @@ def test_sim_deduction_tokens_are_replaced():
         assert TOKEN_PATTERN not in document
 
 
+def test_ektp_tokens_are_replaced():
+    values = {
+        "PODR": "Группа сопровождения ИС", "RAB": "Иванов Иван Иванович, инженер, +7 900 000-11-22",
+        "RUK": "Сидоров Сидор Сидорович, начальник отдела, +7 900 000-33-44", "ACCOUNT": "ROSNEFT\\i.ivanov",
+        "CERT": "StroyKontrol_IvanovII", "CHK_NEW": "", "CHK_GRANT": "X", "CHK_REVOKE": "",
+        "REASON": "Производственная необходимость", "RUK_FIO_SIGN": "Сидоров Сидор Сидорович",
+        "FIO_SIGN": "Иванов Иван Иванович",
+    }
+    result = fill_template("ektp", values, DOCX_PART)
+    with zipfile.ZipFile(io.BytesIO(result)) as archive:
+        document = archive.read("word/document.xml").decode("utf-8")
+        assert "StroyKontrol_IvanovII" in document
+        assert ">X<" in document
+        assert TOKEN_PATTERN not in document
+
+
 def test_c1_pbiot_marks_the_chosen_checkbox():
     values = {
         "CHK_GRANT": "☒", "CHK_REVOKE": "☐", "FIO": "Иванов Иван Иванович",

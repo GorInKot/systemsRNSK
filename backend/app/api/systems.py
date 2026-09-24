@@ -25,6 +25,7 @@ def list_systems(_: User = Depends(get_current_user)) -> list[SystemOut]:
             id=system.id, title=system.title, icon=system.icon, desc=system.desc,
             hl=system.hl, ready=system.ready, need=system.need,
             choice=SystemChoiceOut(field=system.choice_field, options=system.choice_options) if system.choice_field else None,
+            instruction=system.instruction,
         )
         for system in SYSTEMS
     ]
@@ -37,6 +38,8 @@ def generate(system_id: str, payload: GenerateIn, user: User = Depends(get_curre
         raise not_found("Система не найдена")
     if not system.ready:
         raise AppError(409, "Шаблон для этой заявки ещё не подключён", code="not_ready")
+    if system.instruction:
+        raise AppError(409, "У этой заявки нет бланка — инструкция показана на карточке", code="instruction_only")
 
     profile = get_or_create_own_profile(db, user)
     data = with_defaults(profile_to_dict(profile))

@@ -67,6 +67,7 @@ export interface System {
   ready: boolean;
   need: string[];
   choice: SystemChoice | null;
+  instruction: string | null;
 }
 
 export interface EmployeePage {

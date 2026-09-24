@@ -43,6 +43,7 @@ class SystemOut(BaseModel):
     ready: bool
     need: list[str]
     choice: SystemChoiceOut | None = None
+    instruction: str | None = None
 
 
 class ProfileIn(BaseModel):

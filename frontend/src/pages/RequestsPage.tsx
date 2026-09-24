@@ -74,7 +74,9 @@ export function RequestsPage() {
                 </label>
               )}
 
-              {inPrep ? (
+              {system.instruction ? (
+                <p className="card__missing">{system.instruction}</p>
+              ) : inPrep ? (
                 <span className="status status--locked">🛠 Шаблон в подготовке</span>
               ) : missing.length ? (
                 <p className="card__missing">Дозаполните в анкете: {missing.map((key) => FIELD_LABELS[key] ?? key).join(", ")}</p>
@@ -84,16 +86,18 @@ export function RequestsPage() {
 
               {errors[system.id] && <p className="card__missing">{errors[system.id]}</p>}
 
-              <div className="card__acts">
-                <button
-                  type="button"
-                  className="btn btn--primary btn--small"
-                  disabled={inPrep || missing.length > 0 || busy === system.id}
-                  onClick={() => generate(system)}
-                >
-                  {busy === system.id ? "Формируем…" : "Создать и скачать"}
-                </button>
-              </div>
+              {!system.instruction && (
+                <div className="card__acts">
+                  <button
+                    type="button"
+                    className="btn btn--primary btn--small"
+                    disabled={inPrep || missing.length > 0 || busy === system.id}
+                    onClick={() => generate(system)}
+                  >
+                    {busy === system.id ? "Формируем…" : "Создать и скачать"}
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}

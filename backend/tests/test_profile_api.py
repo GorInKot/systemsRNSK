@@ -32,6 +32,14 @@ def test_systems_catalog_lists_pkzi_with_choice(applicant):
         "options": ["Первичная генерация ключевой информации", "Продление сертификата"],
     }
     assert systems["sap"]["ready"] is False
+    assert systems["tech_expert"]["ready"] is True
+    assert systems["tech_expert"]["instruction"]
+
+
+def test_generate_instruction_only_system_is_rejected(applicant):
+    response = applicant.post("/api/systems/tech_expert/generate", json={})
+    assert response.status_code == 409
+    assert response.json()["code"] == "instruction_only"
 
 
 def test_generate_requires_complete_profile(applicant):
@@ -90,6 +98,18 @@ def test_generate_sim_deduction_fills_real_template(applicant):
     with zipfile.ZipFile(BytesIO(response.content)) as archive:
         document = archive.read("word/document.xml").decode("utf-8")
         assert "Иванов Иван Иванович" in document
+        assert "{{" not in document
+
+
+def test_generate_ektp_marks_only_the_chosen_action(applicant):
+    applicant.put("/api/profile", json=FULL_PROFILE)
+    response = applicant.post("/api/systems/ektp/generate", json={"choice": "прекратить доступ (отключить учетную запись)"})
+    assert response.status_code == 200
+    with zipfile.ZipFile(BytesIO(response.content)) as archive:
+        document = archive.read("word/document.xml").decode("utf-8")
+        assert document.count(">X<") == 1
+        assert "Иванов Иван Иванович" in document
+        assert "Производственная необходимость" not in document  # при отключении причину пишет заявитель
         assert "{{" not in document
 
 

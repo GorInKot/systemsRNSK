@@ -456,6 +456,61 @@ def build_c1_pbiot():
     return mixed_zip(tok, DOCX_TEXT_PARTS)
 
 
+# ------------------------------------------------------------------ ЕКТП
+def build_ektp():
+    """Файл «Заявка ЕКТП.docx» (управление доступом к ИС «ЕКТП»). Заполняем данные
+    сотрудника/руководителя/учётной записи и действие; таблицу ролей (табл. 2, 22 роли
+    × 2 среды с колонками «Назначить/Изъять»), даты «изменения вступают в силу» и
+    согласующие подписи (табл. 0) не трогаем — отмечаются от руки.
+
+    Чекбоксы «Действия с учётной записью» (табл. 1, строки 8–10) — не символы, а
+    вложенные таблицы 1×1 (квадрат): «отмечено» = у ячейки нарисованы обе диагонали
+    (``w:tl2br``/``w:tr2bl``, в образце так отмечен пункт «создать новую…»). Диагонали
+    убираем у всех трёх и вместо них вставляем в квадрат токен: «X» у выбранного
+    действия, пусто у остальных."""
+    from docx import Document
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml.ns import qn
+    from docx.shared import Pt
+    src = os.path.join(TYPES, 'Заявка ЕКТП.docx')
+    doc = Document(src)
+
+    t1 = doc.tables[1]
+    set_para(t1.rows[3].cells[1].paragraphs[0], '{{PODR}}')
+    # «Наименование Общества» (строка 4) — фиксированный текст бланка, не трогаем
+    set_para(t1.rows[5].cells[1].paragraphs[0], '{{RAB}}')      # ФИО, должность, телефон работника
+    set_para(t1.rows[6].cells[1].paragraphs[0], '{{RUK}}')      # ФИО, должность, телефон руководителя
+    set_para(t1.rows[7].cells[3].paragraphs[0], '{{ACCOUNT}}')  # значение — в ячейке c3–4
+    set_para(t1.rows[11].cells[1].paragraphs[0], '{{CERT}}')
+
+    for row_idx, token in ((8, '{{CHK_NEW}}'), (9, '{{CHK_GRANT}}'), (10, '{{CHK_REVOKE}}')):
+        box = t1.rows[row_idx].cells[1].tables[0].rows[0].cells[0]
+        borders = box._tc.tcPr.find(qn('w:tcBorders'))
+        for tag in ('w:tl2br', 'w:tr2bl'):
+            diagonal = borders.find(qn(tag))
+            if diagonal is not None:
+                borders.remove(diagonal)
+        par = box.paragraphs[0]
+        par.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = par.add_run(token)
+        run.bold = True
+        run.font.size = Pt(11)
+
+    # обоснование служебной необходимости (табл. 3, строка 3)
+    set_para(doc.tables[3].rows[3].cells[6].paragraphs[0], '{{REASON}}')
+
+    # руководитель структурного подразделения (табл. 4): подразделение и ФИО
+    set_para(doc.tables[4].rows[0].cells[1].paragraphs[0], '{{PODR}}')
+    set_para(doc.tables[4].rows[2].cells[0].paragraphs[0], '{{RUK_FIO_SIGN}}')
+
+    # «Ознакомлен с Регламентом…» (табл. 6): ФИО работника, подпись/дата — от руки
+    set_para(doc.tables[6].rows[0].cells[0].paragraphs[0], '{{FIO_SIGN}}')
+
+    tok = os.path.join(OUT, 'ektp.docx')
+    doc.save(tok)
+    return mixed_zip(tok, DOCX_TEXT_PARTS)
+
+
 # ------------------------------------------------------------------ ВКД
 def build_vkd():
     """Файл «Заявка ВКД.xlsx» (ИС «Виртуальные комнаты данных»), один лист.
@@ -513,6 +568,7 @@ BUILDERS = {
     'sim': build_sim,
     'sim_deduction': build_sim_deduction,
     'c1_pbiot': build_c1_pbiot,
+    'ektp': build_ektp,
 }
 
 
